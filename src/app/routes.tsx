@@ -13,8 +13,24 @@ import Academy from "./pages/Academy";
 import { HandsOnQuests } from "./pages/HandsOnQuests";
 import { QuestDetail } from "./pages/QuestDetail";
 import { VerifierDashboard } from "./pages/VerifierDashboard";
+import { VerifierLogin } from "./pages/VerifierLogin";
+import { VerifierGuard } from "./components/VerifierGuard";
 
 export const router = createBrowserRouter([
+  // Verifier portal routes (outside main layout)
+  {
+    path: "/verifier-login",
+    element: <VerifierLogin />,
+  },
+  {
+    path: "/verifier",
+    element: (
+      <VerifierGuard>
+        <VerifierDashboard />
+      </VerifierGuard>
+    ),
+  },
+  // Main app routes
   {
     path: "/",
     Component: Layout,
@@ -35,7 +51,6 @@ export const router = createBrowserRouter([
       { path: "hands-on", Component: HandsOnQuests },
       { path: "quests", Component: HandsOnQuests },
       { path: "quests/:questId", Component: QuestDetail },
-      { path: "verifier", Component: VerifierDashboard },
     ],
   },
 ]);

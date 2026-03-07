@@ -483,6 +483,9 @@ export interface QuestProgress {
   verified_at: string | null;
   verified_by: string | null;
   rejection_reason: string | null;
+  ai_confidence: number | null;
+  ai_reasoning: string | null;
+  ai_recommendation: string | null;
   created_at: string;
 }
 

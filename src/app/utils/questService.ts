@@ -123,15 +123,40 @@ export async function updateQuestStep(
   userId: string, 
   newStep: number
 ): Promise<void> {
-  const { error } = await supabase
+  // First check if row exists
+  const { data: existing } = await supabase
     .from('quest_progress')
-    .update({ current_step: newStep })
+    .select('id')
     .eq('quest_id', questId)
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .single();
 
-  if (error) {
-    console.error('Error updating quest step:', error);
-    throw error;
+  if (existing) {
+    // Update existing row
+    const { error } = await supabase
+      .from('quest_progress')
+      .update({ current_step: newStep })
+      .eq('id', existing.id);
+
+    if (error) {
+      console.error('Error updating quest step:', error);
+      throw error;
+    }
+  } else {
+    // Insert new row
+    const { error } = await supabase
+      .from('quest_progress')
+      .insert({
+        quest_id: questId,
+        user_id: userId,
+        status: 'in_progress',
+        current_step: newStep
+      });
+
+    if (error) {
+      console.error('Error inserting quest progress:', error);
+      throw error;
+    }
   }
 }
 
@@ -235,7 +260,7 @@ export async function awardBadge(
 export async function fetchPendingSubmissions(): Promise<QuestProgressWithDetails[]> {
   const { data, error } = await supabase
     .from('quest_progress')
-    .select('*, profiles(name, avatar_url), quests(title, tier, certificate_name, badge_name)')
+    .select('*, profiles!quest_progress_user_id_fkey(name, avatar_url, location), quests(title, tier, certificate_name, badge_name, description)')
     .eq('status', 'submitted')
     .order('submitted_at', { ascending: true });
 
@@ -302,20 +327,32 @@ export async function uploadQuestPhoto(
   const ext = file.name.split('.').pop();
   const path = `${userId}/${questId}-${Date.now()}.${ext}`;
 
+  // Upload with explicit content type
   const { error: uploadError } = await supabase.storage
     .from('quest-photos')
-    .upload(path, file, { upsert: true });
+    .upload(path, file, { 
+      upsert: true,
+      contentType: file.type
+    });
 
   if (uploadError) {
     console.error('Error uploading photo:', uploadError);
     throw uploadError;
   }
 
-  const { data: { publicUrl } } = supabase.storage
+  // Get public URL
+  const { data } = supabase.storage
     .from('quest-photos')
     .getPublicUrl(path);
 
-  return publicUrl;
+  console.log('Generated public URL:', data.publicUrl);
+
+  // Verify it's a public URL format
+  if (!data.publicUrl.includes('/object/public/')) {
+    console.error('Photo URL may not be publicly accessible:', data.publicUrl);
+  }
+
+  return data.publicUrl;
 }
 
 // ============================================================================

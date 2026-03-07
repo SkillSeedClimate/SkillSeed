@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router';
-import { Loader2, ArrowLeft } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { getCurrentProfile } from '../utils/matchService';
+import { supabase } from '../utils/supabase';
 import {
   fetchPendingSubmissions,
   verifySubmission,
@@ -115,41 +116,57 @@ export function VerifierDashboard() {
           <p className="mb-4 text-gray-500">
             You need verifier privileges to access this page.
           </p>
-          <Link to="/hands-on" className="text-[#2F8F6B] font-semibold">
-            Back to Quests →
+          <Link to="/verifier-login" className="text-[#2F8F6B] font-semibold">
+            Go to Verifier Login →
           </Link>
         </div>
       </div>
     );
   }
 
+  // Sign out handler
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate('/verifier-login');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-[#1a3a2a] px-8 py-4">
-        <div className="max-w-4xl mx-auto">
+      <div className="bg-[#1a3a2a] px-8 py-6">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-white font-bold text-lg">SkillSeed</span>
+              <span className="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">
+                Verifier Portal
+              </span>
+            </div>
+            <p className="text-green-300 text-sm">
+              {submissions.length} submission{submissions.length !== 1 ? 's' : ''} awaiting review
+            </p>
+          </div>
           <button
-            onClick={() => navigate('/hands-on')}
-            className="flex items-center gap-2 text-green-300 text-sm hover:text-white transition"
+            onClick={handleSignOut}
+            className="border border-green-500 text-green-300 text-xs px-4 py-2 rounded-full hover:bg-green-800 transition"
           >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Quests
+            Sign Out
           </button>
         </div>
       </div>
 
-      {/* Content */}
+      {/* Queue */}
       <div className="max-w-4xl mx-auto px-8 py-10">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Verifier Dashboard</h1>
-        <p className="text-sm text-gray-500 mb-8">
-          {submissions.length} submission{submissions.length !== 1 ? 's' : ''} awaiting
-          review
-        </p>
 
-        {/* Submissions list */}
         {submissions.length === 0 ? (
-          <div className="bg-white border border-gray-100 rounded-2xl p-12 text-center">
-            <p className="text-gray-400">No submissions pending review. 🎉</p>
+          <div className="text-center py-24">
+            <p className="text-5xl mb-4">🎉</p>
+            <p className="text-gray-500 font-medium text-lg">
+              All caught up!
+            </p>
+            <p className="text-gray-400 text-sm mt-1">
+              No submissions pending review.
+            </p>
           </div>
         ) : (
           <div className="flex flex-col gap-6">
@@ -159,46 +176,128 @@ export function VerifierDashboard() {
                 tier?: string;
                 certificate_name?: string;
                 badge_name?: string;
+                description?: string;
               } | undefined;
               const profileData = sub.profiles as unknown as {
                 name?: string;
                 avatar_url?: string;
+                location?: string;
               } | undefined;
 
               return (
-                <div
-                  key={sub.id}
-                  className="bg-white border border-gray-100 rounded-2xl p-6"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <p className="font-semibold text-gray-900">
-                        {questData?.title || 'Unknown Quest'}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        Submitted by {profileData?.name || 'Unknown User'} ·{' '}
-                        {sub.submitted_at
-                          ? new Date(sub.submitted_at).toLocaleDateString()
-                          : 'N/A'}
-                      </p>
+                <div key={sub.id}
+                  className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+
+                  {/* User + quest info */}
+                  <div className="flex items-start justify-between mb-5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center font-bold text-green-700">
+                        {profileData?.name?.charAt(0) || '?'}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">
+                          {profileData?.name || 'Unknown User'}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {profileData?.location || 'Unknown location'} · Submitted{' '}
+                          {sub.submitted_at
+                            ? new Date(sub.submitted_at).toLocaleDateString('en-PH', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric'
+                              })
+                            : 'N/A'}
+                        </p>
+                      </div>
                     </div>
-                    <span className="bg-yellow-50 text-yellow-700 text-xs px-3 py-1 rounded-full">
-                      📜 {questData?.certificate_name || questData?.badge_name || 'Award'}
+                    <span className={`text-xs px-3 py-1 rounded-full font-medium ${
+                      questData?.tier === 'advanced'
+                        ? 'bg-yellow-50 text-yellow-700'
+                        : 'bg-green-50 text-green-700'
+                    }`}>
+                      {questData?.tier === 'advanced' ? '🏆' : '🌱'}{' '}
+                      {questData?.title || 'Unknown Quest'}
                     </span>
                   </div>
 
+                  {/* AI Screening Result */}
+                  {sub.ai_confidence !== null && sub.ai_confidence !== undefined ? (
+                    <div className={`rounded-2xl p-4 mb-5 border ${
+                      sub.ai_recommendation === 'approve'
+                        ? 'bg-green-50 border-green-200'
+                        : sub.ai_recommendation === 'reject'
+                        ? 'bg-red-50 border-red-200'
+                        : 'bg-yellow-50 border-yellow-200'
+                    }`}>
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs font-semibold text-gray-700">
+                          🤖 AI Pre-screening Result
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <div className="w-28 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${
+                                sub.ai_confidence >= 70
+                                  ? 'bg-green-500'
+                                  : sub.ai_confidence >= 40
+                                  ? 'bg-yellow-400'
+                                  : 'bg-red-400'
+                              }`}
+                              style={{ width: `${sub.ai_confidence}%` }}
+                            />
+                          </div>
+                          <span className="text-xs font-bold text-gray-700">
+                            {sub.ai_confidence}%
+                          </span>
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                            sub.ai_recommendation === 'approve'
+                              ? 'bg-green-200 text-green-800'
+                              : sub.ai_recommendation === 'reject'
+                              ? 'bg-red-200 text-red-800'
+                              : 'bg-yellow-200 text-yellow-800'
+                          }`}>
+                            {sub.ai_recommendation === 'approve'
+                              ? '✓ Recommend Approve'
+                              : sub.ai_recommendation === 'reject'
+                              ? '✗ Recommend Reject'
+                              : '⚠ Needs Review'}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-600 leading-relaxed">
+                        {sub.ai_reasoning}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 mb-5">
+                      <p className="text-xs text-gray-400">
+                        ⚠ AI screening unavailable — please review manually.
+                      </p>
+                    </div>
+                  )}
+
                   {/* Photo */}
                   {sub.photo_url && (
-                    <img
-                      src={sub.photo_url}
-                      alt="Submission"
-                      className="w-full h-48 object-cover rounded-xl mb-4"
-                    />
+                    <div className="mb-5">
+                      <p className="text-xs font-medium text-gray-500 mb-2">
+                        Proof Photo
+                      </p>
+                      <img
+                        src={sub.photo_url}
+                        className="w-full h-56 object-cover rounded-xl"
+                        alt="Submission proof"
+                      />
+                    </div>
                   )}
 
                   {/* Reflection */}
-                  <div className="bg-gray-50 rounded-xl p-4 mb-4">
-                    <p className="text-sm text-gray-700">"{sub.reflection}"</p>
+                  <div className="mb-5">
+                    <p className="text-xs font-medium text-gray-500 mb-2">
+                      Reflection
+                    </p>
+                    <p className="text-sm text-gray-700 bg-gray-50 rounded-xl p-4 leading-relaxed">
+                      "{sub.reflection}"
+                    </p>
                   </div>
 
                   {/* Actions */}
@@ -206,18 +305,26 @@ export function VerifierDashboard() {
                     <button
                       onClick={() => handleVerify(sub)}
                       disabled={processingId === sub.id}
-                      className="flex-1 bg-green-600 text-white text-sm py-2.5 rounded-xl hover:bg-green-700 transition disabled:opacity-50"
+                      className="flex-1 bg-[#1a3a2a] text-white text-sm py-3 rounded-xl hover:bg-green-900 transition font-medium disabled:opacity-50"
                     >
-                      {processingId === sub.id ? 'Processing...' : '✓ Verify & Award Certificate'}
+                      {processingId === sub.id ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Processing...
+                        </span>
+                      ) : (
+                        <>✓ Verify & Award {questData?.tier === 'advanced' ? 'Certificate' : 'Badge'}</>
+                      )}
                     </button>
                     <button
                       onClick={() => handleReject(sub)}
                       disabled={processingId === sub.id}
-                      className="flex-1 border border-red-200 text-red-500 text-sm py-2.5 rounded-xl hover:bg-red-50 transition disabled:opacity-50"
+                      className="flex-1 border border-red-200 text-red-500 text-sm py-3 rounded-xl hover:bg-red-50 transition font-medium disabled:opacity-50"
                     >
                       ✗ Reject with Feedback
                     </button>
                   </div>
+
                 </div>
               );
             })}

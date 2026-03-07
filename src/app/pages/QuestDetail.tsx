@@ -8,10 +8,11 @@ import {
   fetchQuestProgress,
   startQuest,
   updateQuestStep,
-  submitQuest,
   uploadQuestPhoto,
   awardBadge
 } from '../utils/questService';
+import { runAiScreening } from '../utils/aiScreening';
+import { supabase } from '../utils/supabase';
 import { AiCoachPanel } from '../components/AiCoachPanel';
 import type { Profile, Quest, QuestProgress } from '../types/database';
 import { toast } from 'sonner';
@@ -100,22 +101,129 @@ export function QuestDetail() {
 
   // Handle submission
   const handleSubmit = async () => {
-    if (!quest || !profile?.id || !questId || !photoFile) return;
+    if (!quest || !profile?.id || !questId || !photoFile) {
+      toast.error('Please upload a photo.');
+      return;
+    }
+    if (reflection.trim().length < 50) {
+      toast.error('Reflection must be at least 50 characters.');
+      return;
+    }
 
     setSubmitting(true);
+
     try {
-      // Upload photo
+      // 1. Upload photo to Supabase Storage
       const photoUrl = await uploadQuestPhoto(profile.id, questId, photoFile);
 
-      // Submit quest
-      await submitQuest(questId, profile.id, photoUrl, reflection);
+      // 2. Run AI screening
+      toast.loading('Analysing your submission...', { id: 'ai-screen' });
+      const aiResult = await runAiScreening(photoUrl, reflection, quest);
+      toast.dismiss('ai-screen');
 
-      // For beginner quests — auto-approve and award badge immediately
-      if (quest.tier === 'beginner') {
-        await awardBadge(questId, profile.id);
-        toast.success('🏅 Badge earned! Check your profile.');
+      // 3. Determine auto-approval logic
+      // Beginner + AI confidence >= 70 + recommendation = approve → auto verify
+      // Advanced → always needs human verifier
+      // AI failed → goes to manual review
+      const autoVerify = 
+        quest.tier === 'beginner' && 
+        aiResult !== null && 
+        aiResult.confidence >= 70 &&
+        aiResult.recommendation === 'approve';
+
+      // 4. Save submission
+      // First check if row exists
+      const { data: existingProgress } = await supabase
+        .from('quest_progress')
+        .select('id')
+        .eq('quest_id', quest.id)
+        .eq('user_id', profile.id)
+        .single();
+
+      // Base submission data (without AI fields in case columns don't exist yet)
+      // Also clear rejection_reason on resubmit
+      const isResubmit = progress?.status === 'rejected';
+      const baseData = {
+        status: autoVerify ? 'verified' : 'submitted',
+        photo_url: photoUrl,
+        reflection: reflection.trim(),
+        submitted_at: new Date().toISOString(),
+        verified_at: autoVerify ? new Date().toISOString() : null,
+        rejection_reason: null // clear previous rejection reason
+      };
+
+      // Try with AI fields first, fall back to without if columns don't exist
+      const dataWithAI = {
+        ...baseData,
+        ai_confidence: aiResult?.confidence ?? null,
+        ai_reasoning: aiResult?.reasoning ?? null,
+        ai_recommendation: aiResult?.recommendation ?? null
+      };
+
+      if (existingProgress) {
+        // Update existing row - try with AI fields first
+        let { error: updateError } = await supabase
+          .from('quest_progress')
+          .update(dataWithAI)
+          .eq('id', existingProgress.id);
+
+        // If AI columns don't exist, retry without them
+        if (updateError && updateError.message?.includes('column')) {
+          console.warn('AI columns may not exist, retrying without them...');
+          const { error: retryError } = await supabase
+            .from('quest_progress')
+            .update(baseData)
+            .eq('id', existingProgress.id);
+          updateError = retryError;
+        }
+
+        if (updateError) {
+          console.error('Update error:', updateError);
+          throw updateError;
+        }
       } else {
-        toast.success("📬 Submitted for verification. You'll be notified when reviewed.");
+        // Insert new row
+        const insertDataWithAI = {
+          quest_id: quest.id,
+          user_id: profile.id,
+          current_step: quest.steps?.length ?? 0,
+          ...dataWithAI
+        };
+
+        let { error: insertError } = await supabase
+          .from('quest_progress')
+          .insert(insertDataWithAI);
+
+        // If AI columns don't exist, retry without them
+        if (insertError && insertError.message?.includes('column')) {
+          console.warn('AI columns may not exist, retrying without them...');
+          const { error: retryError } = await supabase
+            .from('quest_progress')
+            .insert({
+              quest_id: quest.id,
+              user_id: profile.id,
+              current_step: quest.steps?.length ?? 0,
+              ...baseData
+            });
+          insertError = retryError;
+        }
+
+        if (insertError) {
+          console.error('Insert error:', insertError);
+          throw insertError;
+        }
+      }
+
+      // 5. Auto-award badge if beginner + high confidence
+      if (autoVerify) {
+        await awardBadge(questId, profile.id);
+        toast.success('🏅 Badge earned! Submission auto-verified.');
+      } else if (isResubmit) {
+        toast.success("📬 Resubmitted! Under review again.");
+      } else if (quest.tier === 'beginner') {
+        toast.success("📬 Submitted! Being reviewed — you'll be notified shortly.");
+      } else {
+        toast.success('📬 Submitted for verification. Certificate issued after review.');
       }
 
       navigate('/hands-on');
@@ -281,16 +389,35 @@ export function QuestDetail() {
             })}
           </div>
 
-          {/* Submission form — shown when all steps done */}
-          {allStepsDone && progress?.status === 'in_progress' && (
+          {/* Submission form — shown when all steps done and (in_progress OR rejected) */}
+          {allStepsDone && (progress?.status === 'in_progress' || progress?.status === 'rejected') && (
             <div className="bg-white border border-gray-100 rounded-2xl p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-1">
-                Submit for Verification
+                {progress?.status === 'rejected' 
+                  ? 'Resubmit Your Proof' 
+                  : 'Submit for Verification'
+                }
               </h2>
+
+              {/* Show rejection reason prominently above the form */}
+              {progress?.status === 'rejected' && progress?.rejection_reason && (
+                <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-5">
+                  <p className="text-red-600 text-xs font-semibold mb-1">
+                    ⚠ Previous submission was rejected
+                  </p>
+                  <p className="text-red-500 text-xs">
+                    Reason: {progress.rejection_reason}
+                  </p>
+                  <p className="text-red-400 text-xs mt-1">
+                    Please address the feedback above and resubmit.
+                  </p>
+                </div>
+              )}
+
               <p className="text-xs text-gray-400 mb-5">
                 {quest.tier === 'beginner'
-                  ? 'Upload proof to earn your badge. Auto-approved within 24 hours.'
-                  : 'Upload proof for verifier review. Certificates are issued after manual verification.'}
+                  ? 'Upload proof to earn your badge.'
+                  : 'Upload proof for verifier review. Certificate issued after approval.'}
               </p>
 
               {/* Photo upload */}
@@ -347,7 +474,12 @@ export function QuestDetail() {
                 disabled={!photoFile || reflection.length < 50 || submitting}
                 className="w-full bg-[#1a3a2a] text-white py-3 rounded-xl text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-green-900 transition"
               >
-                {submitting ? 'Submitting...' : 'Submit for Verification →'}
+                {submitting 
+                  ? 'Submitting...' 
+                  : progress?.status === 'rejected'
+                  ? 'Resubmit for Verification →'
+                  : 'Submit for Verification →'
+                }
               </button>
             </div>
           )}
@@ -369,18 +501,6 @@ export function QuestDetail() {
                 Congratulations! You've earned the{' '}
                 <strong>{quest.badge_name || quest.certificate_name}</strong>{' '}
                 {quest.tier === 'beginner' ? 'badge' : 'certificate'}.
-              </p>
-            </div>
-          )}
-
-          {progress?.status === 'rejected' && (
-            <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
-              <p className="text-red-700 font-medium">⚠ Submission Rejected</p>
-              <p className="text-red-600 text-sm mt-1">
-                Reason: {progress.rejection_reason || 'No reason provided.'}
-              </p>
-              <p className="text-red-500 text-xs mt-2">
-                Please review the feedback and resubmit your proof.
               </p>
             </div>
           )}
