@@ -6,7 +6,7 @@ import { useAuth } from "../hooks/useAuth";
 const navLinks = [
   { label: "Missions",     href: "/browse",    comingSoon: false },
   { label: "Community", href: "/community", comingSoon: false },
-  { label: "Hands-on",   href: "/academy",   comingSoon: false },
+  { label: "Hands-on",   href: "/hands-on",   comingSoon: false },
   { label: "Funding",   href: "/funding",   comingSoon: false },
 ];
 

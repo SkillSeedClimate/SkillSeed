@@ -10,6 +10,9 @@ import { PostProject } from "./pages/PostProject";
 import { FundingResources } from "./pages/FundingResources";
 import { EditFunding } from "./pages/EditFunding";
 import Academy from "./pages/Academy";
+import { HandsOnQuests } from "./pages/HandsOnQuests";
+import { QuestDetail } from "./pages/QuestDetail";
+import { VerifierDashboard } from "./pages/VerifierDashboard";
 
 export const router = createBrowserRouter([
   {
@@ -28,6 +31,11 @@ export const router = createBrowserRouter([
       { path: "funding", Component: FundingResources },
       { path: "edit-funding/:fundingId", Component: EditFunding },
       { path: "academy", Component: Academy },
+      // Hands-on Quests system
+      { path: "hands-on", Component: HandsOnQuests },
+      { path: "quests", Component: HandsOnQuests },
+      { path: "quests/:questId", Component: QuestDetail },
+      { path: "verifier", Component: VerifierDashboard },
     ],
   },
 ]);
