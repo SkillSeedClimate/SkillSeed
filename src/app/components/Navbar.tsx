@@ -4,7 +4,7 @@ import { Menu, X, Sprout, ChevronDown, User, Settings, LogOut, TrendingUp } from
 import { useAuth } from "../hooks/useAuth";
 
 const navLinks = [
-  { label: "Work",     href: "/browse",    comingSoon: false },
+  { label: "Missions",     href: "/browse",    comingSoon: false },
   { label: "Community", href: "/community", comingSoon: false },
   { label: "Hands-on",   href: "/academy",   comingSoon: false },
   { label: "Funding",   href: "/funding",   comingSoon: false },

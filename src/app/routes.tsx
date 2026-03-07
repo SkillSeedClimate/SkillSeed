@@ -8,6 +8,7 @@ import { CommunityChallenges } from "./pages/CommunityChallenges";
 import { AuthPage } from "./pages/AuthPage";
 import { PostProject } from "./pages/PostProject";
 import { FundingResources } from "./pages/FundingResources";
+import { EditFunding } from "./pages/EditFunding";
 import Academy from "./pages/Academy";
 
 export const router = createBrowserRouter([
@@ -25,6 +26,7 @@ export const router = createBrowserRouter([
       { path: "auth", Component: AuthPage },
       { path: "post-project", Component: PostProject },
       { path: "funding", Component: FundingResources },
+      { path: "edit-funding/:fundingId", Component: EditFunding },
       { path: "academy", Component: Academy },
     ],
   },
