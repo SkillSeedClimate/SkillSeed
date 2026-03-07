@@ -2,28 +2,25 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import {
   Search,
-  Filter,
   MapPin,
   Users,
   Clock,
-  Zap,
-  Star,
   ChevronRight,
   AlertTriangle,
-  CheckCircle,
   Sprout,
   Sun,
-  Wrench,
   TreePine,
   Recycle,
   Droplets,
-  SlidersHorizontal,
   Grid,
   List,
-  BookOpen,
   Target,
   Loader2,
+  Briefcase,
+  Heart,
+  BookOpen,
 } from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
 import { getProjects, getMyProjects } from "../utils/matchService";
 import type { Project } from "../types/database";
 
@@ -116,29 +113,34 @@ function getProjectImage(focusArea: string[] | undefined): string {
 
 const categories = ["All", "climate science", "renewable energy", "education", "urban planning", "climate finance", "technology", "advocacy"];
 const regions = ["All Regions", "Global", "North America", "Africa", "Caribbean", "West Coast", "Pacific Northwest", "Southwest"];
-const difficulties = ["All Levels", "Beginner", "Intermediate", "Advanced"];
 
 export function MissionDashboard() {
-  const [activeTab, setActiveTab] = useState<"browse" | "poster">("browse");
+  const { user } = useAuth();
+  const [workTab, setWorkTab] = useState<"volunteers" | "professionals" | "my_projects">("volunteers");
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
   const [urgentOnly, setUrgentOnly] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [showFilters, setShowFilters] = useState(false);
+  const [showPostModal, setShowPostModal] = useState(false);
   
   // Real data from Supabase
   const [missions, setMissions] = useState<Project[]>([]);
+  const [myProjects, setMyProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch projects on mount
   useEffect(() => {
-    async function fetchProjects() {
+    async function fetchData() {
       try {
         setLoading(true);
-        const data = await getProjects();
-        setMissions(data);
+        const [allProjects, userProjects] = await Promise.all([
+          getProjects(),
+          getMyProjects(),
+        ]);
+        setMissions(allProjects);
+        setMyProjects(userProjects);
       } catch (err) {
         setError("Failed to load projects");
         console.error(err);
@@ -146,7 +148,7 @@ export function MissionDashboard() {
         setLoading(false);
       }
     }
-    fetchProjects();
+    fetchData();
   }, []);
 
   const filtered = missions.filter((m) => {
@@ -156,12 +158,25 @@ export function MissionDashboard() {
     const matchCat = selectedCategory === "All" || (m.focus_area?.some(f => f.toLowerCase().includes(selectedCategory.toLowerCase())) || false);
     const matchRegion = selectedRegion === "All Regions" || m.region === selectedRegion;
     const matchUrgent = !urgentOnly || m.type === "urgent";
-    return matchSearch && matchCat && matchRegion && matchUrgent;
+    // Filter by work tab (only for volunteers/professionals, not my_projects)
+    const matchWorkTab = workTab === "my_projects" ? true :
+      workTab === "volunteers" 
+        ? (m.volunteers_needed ?? 0) > 0 
+        : (m.professionals_needed ?? 0) > 0;
+    // Note: We no longer filter out own projects — instead we show "Your Project" label on the card
+    return matchSearch && matchCat && matchRegion && matchUrgent && matchWorkTab;
   });
 
   const urgent = filtered.filter(m => m.type === "urgent");
   const regular = filtered.filter(m => m.type !== "urgent");
-  const sorted = [...urgent, ...regular];
+  // Sort by urgency first, then by start_date for urgent projects
+  const sorted = [
+    ...urgent.sort((a, b) => {
+      if (a.start_date && b.start_date) return new Date(a.start_date).getTime() - new Date(b.start_date).getTime();
+      return 0;
+    }),
+    ...regular
+  ];
 
   // Loading state
   if (loading) {
@@ -196,37 +211,61 @@ export function MissionDashboard() {
       {/* Header */}
       <div className="bg-[#0F3D2E] py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-            <div>
-              <p className="text-[#6DD4A8] font-semibold text-sm uppercase tracking-wider mb-1">Mission Board</p>
-              <h1 className="text-white font-[Manrope] font-bold text-3xl md:text-4xl">
-                Find Your Mission
-              </h1>
-              <p className="text-[#A8D5BF] mt-2">
-                Based on your profile, <span className="text-white font-semibold">12 projects match you right now.</span>
-              </p>
-            </div>
-            {/* Tab switcher */}
-            <div className="flex bg-white/10 rounded-xl p-1 gap-1 w-fit">
+          <p className="text-[#6DD4A8] font-semibold text-sm uppercase tracking-wider mb-1">Mission Board</p>
+          <h1 className="text-white font-[Manrope] font-bold text-3xl md:text-4xl">
+            Find Your Mission
+          </h1>
+          <p className="text-[#A8D5BF] mt-2">
+            Based on your profile, <span className="text-white font-semibold">{sorted.length} projects match you right now.</span>
+          </p>
+        </div>
+      </div>
+
+      {/* Sub-tab bar */}
+      <div className="bg-white border-b border-gray-200 sticky top-16 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between py-3">
+            <div className="flex gap-2">
               <button
-                onClick={() => setActiveTab("browse")}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 ${
-                  activeTab === "browse" ? "bg-white text-[#0F3D2E]" : "text-white/70 hover:text-white"
+                onClick={() => setWorkTab('volunteers')}
+                className={`px-5 py-2 rounded-full text-sm font-medium transition flex items-center gap-2 ${
+                  workTab === 'volunteers'
+                    ? 'bg-[#1a3a2a] text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
-                <BookOpen className="w-4 h-4" />
-                Browse Missions
+                <Heart className="w-4 h-4" />
+                Volunteers
               </button>
               <button
-                onClick={() => setActiveTab("poster")}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 ${
-                  activeTab === "poster" ? "bg-white text-[#0F3D2E]" : "text-white/70 hover:text-white"
+                onClick={() => setWorkTab('professionals')}
+                className={`px-5 py-2 rounded-full text-sm font-medium transition flex items-center gap-2 ${
+                  workTab === 'professionals'
+                    ? 'bg-[#1a3a2a] text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <Briefcase className="w-4 h-4" />
+                Professionals
+              </button>
+              <button
+                onClick={() => setWorkTab('my_projects')}
+                className={`px-5 py-2 rounded-full text-sm font-medium transition flex items-center gap-2 ${
+                  workTab === 'my_projects'
+                    ? 'bg-[#1a3a2a] text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
                 <Target className="w-4 h-4" />
                 My Projects
               </button>
             </div>
+            <Link
+              to="/post-project"
+              className="bg-[#1a3a2a] text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-green-900 transition"
+            >
+              + Post a Project
+            </Link>
           </div>
         </div>
       </div>
@@ -300,96 +339,132 @@ export function MissionDashboard() {
         {/* Results count */}
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-gray-500">
-            <span className="font-semibold text-[#0F3D2E]">{sorted.length}</span> missions found
+            <span className="font-semibold text-[#0F3D2E]">{sorted.length}</span> {workTab === 'volunteers' ? 'volunteer' : 'professional'} missions found
             {urgent.length > 0 && (
               <span className="ml-2 text-red-600 font-medium">· {urgent.length} urgent</span>
             )}
           </p>
-          <Link to="/post-project" className="text-sm font-semibold text-[#2F8F6B] hover:text-[#0F3D2E] flex items-center gap-1">
-            + Post a Mission
-          </Link>
         </div>
 
-        {activeTab === "browse" && (
+        {workTab !== "my_projects" && (
           <>
             {/* Urgent banner */}
             {urgent.length > 0 && !urgentOnly && (
-              <div className="bg-red-50 border border-red-100 rounded-xl p-4 mb-5 flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4 mb-6 flex items-start gap-3">
+                <span className="text-red-500 text-xl">⚠️</span>
                 <div>
-                  <p className="font-semibold text-red-700 text-sm">
-                    {urgent.length} urgent mission{urgent.length > 1 ? "s" : ""} need immediate help
+                  <p className="text-red-600 font-semibold text-sm">
+                    {urgent.length} urgent mission{urgent.length > 1 ? 's' : ''} need immediate help
                   </p>
-                  <p className="text-red-600 text-xs mt-0.5">These projects have critical deadlines or immediate needs.</p>
+                  <p className="text-red-400 text-xs mt-0.5">
+                    These projects have critical deadlines — your skills are needed now.
+                  </p>
                 </div>
               </div>
             )}
 
             {viewMode === "grid" ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {sorted.map((mission) => {
                   const style = getCategoryStyle(mission.focus_area);
-                  const volunteerProgress = mission.volunteers_needed > 0 ? Math.min(100, Math.random() * 80) : 0; // Placeholder progress
+                  const isOwner = user && String(mission.poster_id) === String(user.id);
                   return (
-                    <Link
-                      to={`/missions/${mission.id}`}
+                    <div
                       key={mission.id}
-                      className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all group"
+                      className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition group flex flex-col"
                     >
-                      <div className="relative">
-                        <img src={getProjectImage(mission.focus_area)} alt={mission.title} className="w-full h-44 object-cover group-hover:scale-105 transition-transform duration-300" />
+                      {/* Image — fixed shorter height */}
+                      <div className="relative h-40 overflow-hidden">
+                        <img 
+                          src={getProjectImage(mission.focus_area)} 
+                          alt={mission.title} 
+                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300" 
+                        />
+                        {/* Urgent badge */}
                         {mission.type === "urgent" && (
-                          <div className="absolute top-3 left-3 flex items-center gap-1 bg-red-500 text-white text-xs font-bold px-2.5 py-1 rounded-full">
+                          <span className="absolute top-3 left-3 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
                             <AlertTriangle className="w-3 h-3" />
                             URGENT
-                          </div>
+                          </span>
                         )}
-                        <div className="absolute top-3 right-3">
-                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${style.color}`}>
-                            {mission.focus_area?.[0] || "Project"}
+                        {/* Category badge */}
+                        <span className="absolute top-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+                          {mission.focus_area?.[0] || "Project"}
+                        </span>
+                      </div>
+
+                      {/* Card body — flex column to push button to bottom */}
+                      <div className="p-4 flex flex-col flex-1">
+                        {/* Org name */}
+                        <p className="text-xs text-gray-400 mb-1 flex items-center gap-1">
+                          {mission.region || "Independent"}
+                          <span className="text-green-500">✓</span>
+                        </p>
+
+                        {/* Title */}
+                        <h3 className="text-sm font-semibold text-gray-900 leading-snug mb-2 line-clamp-2">
+                          {mission.title}
+                        </h3>
+
+                        {/* Meta row */}
+                        <div className="flex items-center gap-3 text-xs text-gray-500 mb-3">
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {mission.location || "Remote"}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {mission.duration || "Flexible"}
                           </span>
                         </div>
-                      </div>
-                      <div className="p-5">
-                        <div className="flex items-start justify-between gap-2 mb-1">
-                          <h3 className="font-[Manrope] font-bold text-[#0F3D2E] text-base leading-tight">{mission.title}</h3>
-                          <CheckCircle className="w-4 h-4 text-[#2F8F6B] flex-shrink-0 mt-0.5" />
+
+                        {/* People needed */}
+                        <div className="flex items-center gap-2 flex-wrap mb-3">
+                          {(mission.volunteers_needed ?? 0) > 0 && (
+                            <span className="bg-green-50 text-green-700 text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                              <Users className="w-3 h-3" />
+                              {mission.volunteers_needed} volunteers
+                            </span>
+                          )}
+                          {(mission.professionals_needed ?? 0) > 0 && (
+                            <span className="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                              <Briefcase className="w-3 h-3" />
+                              {mission.professionals_needed} professionals
+                            </span>
+                          )}
                         </div>
-                        <p className="text-xs text-gray-500 mb-3">{mission.region || "Global"}</p>
-                        <div className="flex items-center gap-3 text-xs text-gray-500 mb-4">
-                          <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{mission.location || "Remote"}</span>
-                          <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{mission.duration || "Flexible"}</span>
-                        </div>
-                        <div className="space-y-2 mb-4">
-                          <div>
-                            <div className="flex justify-between text-xs mb-1">
-                              <span className="text-gray-500">Volunteers needed</span>
-                              <span className="font-medium text-[#0F3D2E]">{mission.volunteers_needed}</span>
-                            </div>
-                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-[#2F8F6B] rounded-full"
-                                style={{ width: `${volunteerProgress}%` }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5 mb-4">
+
+                        {/* Skills needed — max 3 shown */}
+                        <div className="flex flex-wrap gap-1 mb-4">
                           {mission.skills_needed?.slice(0, 3).map(skill => (
-                            <span key={skill} className="text-xs bg-[#E6F4EE] text-[#0F3D2E] px-2 py-0.5 rounded-full">{skill}</span>
+                            <span key={skill} className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full">
+                              {skill}
+                            </span>
                           ))}
+                          {(mission.skills_needed?.length ?? 0) > 3 && (
+                            <span className="text-gray-400 text-xs px-1">
+                              +{(mission.skills_needed?.length ?? 0) - 3} more
+                            </span>
+                          )}
                         </div>
-                        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                          <div className="flex items-center gap-1 text-xs font-semibold text-[#2F8F6B]">
-                            <Star className="w-3.5 h-3.5 fill-[#2F8F6B]" />
-                            +{mission.points} points
-                          </div>
-                          <span className="text-xs font-semibold text-[#2F8F6B] flex items-center gap-1">
-                            View & Apply <ChevronRight className="w-3.5 h-3.5" />
-                          </span>
-                        </div>
+
+                        {/* Spacer pushes button to bottom */}
+                        <div className="flex-1" />
+
+                        {/* CTA — outline for owners, filled for others */}
+                        <Link 
+                          to={`/missions/${mission.id}`}
+                          className={`w-full text-sm py-2 rounded-xl transition flex items-center justify-center gap-1 font-medium ${
+                            isOwner
+                              ? "border-2 border-[#1a3a2a] text-[#1a3a2a] hover:bg-green-50"
+                              : "bg-[#1a3a2a] text-white hover:bg-green-900"
+                          }`}
+                        >
+                          {isOwner ? "View Your Project" : "View & Apply"}
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </Link>
                       </div>
-                    </Link>
+                    </div>
                   );
                 })}
               </div>
@@ -397,9 +472,9 @@ export function MissionDashboard() {
               <div className="space-y-3">
                 {sorted.map((mission) => {
                   const style = getCategoryStyle(mission.focus_area);
+                  const isOwner = user && String(mission.poster_id) === String(user.id);
                   return (
-                    <Link
-                      to={`/missions/${mission.id}`}
+                    <div
                       key={mission.id}
                       className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex overflow-hidden group"
                     >
@@ -418,7 +493,7 @@ export function MissionDashboard() {
                             </div>
                             <p className="text-xs text-gray-500 mt-0.5">{mission.region || "Global"} · {mission.location || "Remote"}</p>
                           </div>
-                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0 ${style.color}`}>
+                          <span className="bg-black/70 text-white text-xs px-2.5 py-1 rounded-full flex-shrink-0">
                             {mission.focus_area?.[0] || "Project"}
                           </span>
                         </div>
@@ -426,15 +501,31 @@ export function MissionDashboard() {
                         <div className="flex items-center justify-between mt-3">
                           <div className="flex gap-3 text-xs text-gray-500">
                             <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{mission.duration || "Flexible"}</span>
-                            <span className="flex items-center gap-1"><Users className="w-3 h-3" />{mission.volunteers_needed} needed</span>
-                            <span className="flex items-center gap-1 font-semibold text-[#2F8F6B]"><Star className="w-3 h-3 fill-[#2F8F6B]" />+{mission.points} pts</span>
+                            {(mission.volunteers_needed ?? 0) > 0 && (
+                              <span className="flex items-center gap-1 text-green-700">
+                                <Users className="w-3 h-3" />{mission.volunteers_needed} volunteers
+                              </span>
+                            )}
+                            {(mission.professionals_needed ?? 0) > 0 && (
+                              <span className="flex items-center gap-1 text-blue-700">
+                                <Briefcase className="w-3 h-3" />{mission.professionals_needed} professionals
+                              </span>
+                            )}
                           </div>
-                          <span className="text-xs font-semibold text-[#2F8F6B] flex items-center gap-1">
-                            View & Apply <ChevronRight className="w-3.5 h-3.5" />
-                          </span>
+                          {/* CTA — outline for owners, filled for others */}
+                          <Link
+                            to={`/missions/${mission.id}`}
+                            className={`text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1 transition ${
+                              isOwner
+                                ? "border-2 border-[#1a3a2a] text-[#1a3a2a] hover:bg-green-50"
+                                : "bg-[#1a3a2a] text-white hover:bg-green-900"
+                            }`}
+                          >
+                            {isOwner ? "View Your Project" : "View & Apply"} <ChevronRight className="w-3.5 h-3.5" />
+                          </Link>
                         </div>
                       </div>
-                    </Link>
+                    </div>
                   );
                 })}
               </div>
@@ -442,53 +533,53 @@ export function MissionDashboard() {
           </>
         )}
 
-        {activeTab === "poster" && (
-          <PosterView />
+        {workTab === "my_projects" && (
+          <MyProjectsView projects={myProjects} />
         )}
       </div>
     </div>
   );
 }
 
-function PosterView() {
-  const projects = [
-    {
-      title: "Coastal Reforestation Drive",
-      status: "Active",
-      volunteers: 45,
-      volunteersNeeded: 60,
-      professionals: 3,
-      professionalsNeeded: 5,
-      notifications: 12,
-    },
-    {
-      title: "Solar Panel Installation",
-      status: "Active",
-      volunteers: 8,
-      volunteersNeeded: 15,
-      professionals: 4,
-      professionalsNeeded: 5,
-      notifications: 3,
-    },
-    {
-      title: "Urban Garden Network",
-      status: "Draft",
-      volunteers: 0,
-      volunteersNeeded: 20,
-      professionals: 0,
-      professionalsNeeded: 3,
-      notifications: 0,
-    },
-  ];
+function MyProjectsView({ projects }: { projects: Project[] }) {
+  const activeProjects = projects.filter(p => p.status === 'open' && p.type !== 'urgent');
+  const urgentProjects = projects.filter(p => p.type === 'urgent');
+  const draftProjects = projects.filter(p => p.status === 'draft');
+
+  const getStatusBadge = (project: Project) => {
+    if (project.type === 'urgent') {
+      return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700 flex items-center gap-1"><AlertTriangle className="w-3 h-3" />Urgent</span>;
+    }
+    if (project.status === 'draft') {
+      return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Draft</span>;
+    }
+    return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">Active</span>;
+  };
+
+  if (projects.length === 0) {
+    return (
+      <div className="text-center py-16">
+        <Target className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-600 mb-2">No projects yet</h3>
+        <p className="text-gray-400 text-sm mb-6">Create your first project to start finding volunteers and professionals.</p>
+        <Link 
+          to="/post-project" 
+          className="inline-flex items-center gap-2 bg-[#1a3a2a] text-white px-6 py-3 rounded-xl font-medium hover:bg-green-900 transition"
+        >
+          + Post a Project
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div>
       {/* Summary strip */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         {[
-          { label: "Active Projects", value: 2, color: "bg-green-50 text-green-700 border-green-100" },
-          { label: "Draft Projects", value: 1, color: "bg-amber-50 text-amber-700 border-amber-100" },
-          { label: "Completed", value: 4, color: "bg-blue-50 text-blue-700 border-blue-100" },
+          { label: "Active Projects", value: activeProjects.length, color: "bg-green-50 text-green-700 border-green-100" },
+          { label: "Urgent Projects", value: urgentProjects.length, color: "bg-red-50 text-red-700 border-red-100" },
+          { label: "Drafts", value: draftProjects.length, color: "bg-amber-50 text-amber-700 border-amber-100" },
         ].map(item => (
           <div key={item.label} className={`rounded-xl border p-4 text-center ${item.color}`}>
             <div className="text-3xl font-[Manrope] font-bold">{item.value}</div>
@@ -497,59 +588,40 @@ function PosterView() {
         ))}
       </div>
 
-      {/* Match banner */}
-      <div className="bg-[#E6F4EE] border border-[#2F8F6B]/20 rounded-xl p-4 mb-6 flex items-center gap-3">
-        <CheckCircle className="w-5 h-5 text-[#2F8F6B]" />
-        <p className="text-[#0F3D2E] font-medium text-sm">
-          <span className="font-bold">34 vetted profiles</span> matched your Coastal Reforestation project in Surigao del Norte
-        </p>
-        <Link to="/dashboard" className="ml-auto text-sm font-semibold text-[#2F8F6B] whitespace-nowrap">View Matches →</Link>
-      </div>
-
       <div className="space-y-4">
-        {projects.map(p => (
-          <div key={p.title} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        {projects.map(project => (
+          <div key={project.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-[Manrope] font-bold text-[#0F3D2E]">{p.title}</h3>
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                    p.status === "Active" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
-                  }`}>{p.status}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <h3 className="font-[Manrope] font-bold text-[#0F3D2E]">{project.title}</h3>
+                  {getStatusBadge(project)}
                 </div>
-                <div className="flex gap-6 mt-3">
+                <p className="text-xs text-gray-500 mb-3">{project.location || 'No location'} · {project.duration || 'Flexible'}</p>
+                <div className="flex gap-6">
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Volunteers</p>
-                    <div className="flex items-center gap-2">
-                      <div className="w-24 h-1.5 bg-gray-100 rounded-full">
-                        <div className="h-full bg-[#2F8F6B] rounded-full" style={{ width: p.volunteersNeeded > 0 ? `${(p.volunteers / p.volunteersNeeded) * 100}%` : "0%" }} />
-                      </div>
-                      <span className="text-xs font-medium text-[#0F3D2E]">{p.volunteers}/{p.volunteersNeeded}</span>
-                    </div>
+                    <p className="text-xs text-gray-500 mb-1">Volunteers needed</p>
+                    <span className="text-sm font-semibold text-[#0F3D2E]">{project.volunteers_needed ?? 0}</span>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Professionals</p>
-                    <div className="flex items-center gap-2">
-                      <div className="w-24 h-1.5 bg-gray-100 rounded-full">
-                        <div className="h-full bg-teal-500 rounded-full" style={{ width: p.professionalsNeeded > 0 ? `${(p.professionals / p.professionalsNeeded) * 100}%` : "0%" }} />
-                      </div>
-                      <span className="text-xs font-medium text-[#0F3D2E]">{p.professionals}/{p.professionalsNeeded}</span>
-                    </div>
+                    <p className="text-xs text-gray-500 mb-1">Professionals needed</p>
+                    <span className="text-sm font-semibold text-[#0F3D2E]">{project.professionals_needed ?? 0}</span>
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                {p.notifications > 0 && (
-                  <span className="bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
-                    {p.notifications}
-                  </span>
-                )}
-                <button className="text-sm font-semibold text-[#2F8F6B] border border-[#2F8F6B]/30 px-3 py-1.5 rounded-lg hover:bg-[#E6F4EE] transition-colors">
-                  View Matches
-                </button>
-                <button className="text-sm font-medium text-gray-500 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Link 
+                  to={`/missions/${project.id}`}
+                  className="text-sm font-semibold text-[#2F8F6B] border border-[#2F8F6B]/30 px-3 py-1.5 rounded-lg hover:bg-[#E6F4EE] transition-colors"
+                >
+                  View
+                </Link>
+                <Link 
+                  to={`/post-project?edit=${project.id}`}
+                  className="text-sm font-medium text-gray-500 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
+                >
                   Edit
-                </button>
+                </Link>
               </div>
             </div>
           </div>

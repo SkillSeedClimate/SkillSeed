@@ -20,8 +20,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
-import { getProjectById, applyToProject } from "../utils/matchService";
-import type { Project } from "../types/database";
+import { getProjectById, applyToProject, getConnectionsForProject, updateConnectionStatus } from "../utils/matchService";
+import type { Project, ConnectionWithDetails } from "../types/database";
 
 const missionsData: Record<string, any> = {
   "urban-garden": {
@@ -193,13 +193,19 @@ export function MissionDetail() {
   const [submitted, setSubmitted] = useState(false);
   const [saved, setSaved] = useState(false);
   const [dbProject, setDbProject] = useState<Project | null>(null);
+  const [applicants, setApplicants] = useState<ConnectionWithDetails[]>([]);
+  const [applicantsLoading, setApplicantsLoading] = useState(false);
+  const [showApplicants, setShowApplicants] = useState(false);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
 
+  // Ownership check using useAuth user.id directly
+  const isOwner = user && dbProject && String(dbProject.poster_id) === String(user.id);
+
   // Fetch project from database
   useEffect(() => {
-    async function fetchProject() {
+    async function fetchData() {
       if (!id) {
         setLoading(false);
         return;
@@ -216,8 +222,30 @@ export function MissionDetail() {
       setLoading(false);
     }
 
-    fetchProject();
+    fetchData();
   }, [id]);
+
+  // Fetch applicants when owner clicks "View Applicants"
+  const fetchApplicants = async () => {
+    if (!dbProject?.id) return;
+    setApplicantsLoading(true);
+    try {
+      const connections = await getConnectionsForProject(dbProject.id);
+      setApplicants(connections);
+    } catch (err) {
+      console.error('Error fetching applicants:', err);
+    } finally {
+      setApplicantsLoading(false);
+    }
+  };
+
+  // Handle accept/decline applicant
+  const handleApplicantAction = async (connectionId: string, action: 'accepted' | 'declined') => {
+    const updated = await updateConnectionStatus(connectionId, action);
+    if (updated) {
+      setApplicants(prev => prev.map(a => a.id === connectionId ? { ...a, status: action } : a));
+    }
+  };
 
   // Build a unified mission object (prefer database, fallback to mock)
   const mission = dbProject ? {
@@ -285,6 +313,12 @@ export function MissionDetail() {
     // Must have a real database project to apply
     if (!dbProject) {
       setApplyError("This is a demo mission. Please browse real projects to apply.");
+      return;
+    }
+
+    // Block applying to your own project
+    if (isOwner) {
+      setApplyError("You can't apply to your own project.");
       return;
     }
 
@@ -454,13 +488,115 @@ export function MissionDetail() {
               </div>
             </div>
 
-            {/* Apply Form */}
+            {/* Apply Form / Owner Actions */}
             <div className="bg-white rounded-2xl border border-[#2F8F6B]/20 shadow-sm p-6">
               <h2 className="font-[Manrope] font-bold text-[#0F3D2E] text-xl mb-5">
-                Apply to This Mission
+                {isOwner ? "Manage Your Project" : "Apply to This Mission"}
               </h2>
 
-              {submitted ? (
+              {isOwner ? (
+                <div className="flex flex-col gap-3">
+                  <Link
+                    to={`/post-project?edit=${dbProject?.id}`}
+                    className="flex-1 flex items-center justify-center gap-2 border-2 border-[#1a3a2a] text-[#1a3a2a] text-sm py-3 rounded-xl hover:bg-green-50 transition font-medium"
+                  >
+                    ✏️ Edit Project
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setShowApplicants(!showApplicants);
+                      if (!showApplicants && applicants.length === 0) {
+                        fetchApplicants();
+                      }
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 bg-[#1a3a2a] text-white text-sm py-3 rounded-xl hover:bg-green-900 transition font-medium"
+                  >
+                    👥 {showApplicants ? 'Hide Applicants' : 'View Applicants'}
+                  </button>
+
+                  {/* Applicants Section */}
+                  {showApplicants && (
+                    <div className="mt-4 border-t pt-4">
+                      <h3 className="font-semibold text-[#0F3D2E] mb-3">Applicants ({applicants.length})</h3>
+                      
+                      {applicantsLoading ? (
+                        <div className="flex items-center justify-center py-6">
+                          <Loader2 className="w-5 h-5 animate-spin text-[#2F8F6B]" />
+                          <span className="ml-2 text-gray-500 text-sm">Loading applicants...</span>
+                        </div>
+                      ) : applicants.length === 0 ? (
+                        <div className="text-center py-6 text-gray-500">
+                          <Users className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                          <p className="text-sm">No applicants yet</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3 max-h-80 overflow-y-auto">
+                          {applicants.map((applicant) => (
+                            <div key={applicant.id} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 bg-[#2F8F6B] rounded-full flex items-center justify-center text-white font-semibold">
+                                    {applicant.responder_profile?.name?.charAt(0) || '?'}
+                                  </div>
+                                  <div>
+                                    <p className="font-medium text-[#0F3D2E]">{applicant.responder_profile?.name || 'Unknown'}</p>
+                                    <p className="text-xs text-gray-500 capitalize">{applicant.role} · {applicant.responder_profile?.location || 'No location'}</p>
+                                  </div>
+                                </div>
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                  applicant.status === 'accepted' ? 'bg-green-100 text-green-700' :
+                                  applicant.status === 'declined' ? 'bg-red-100 text-red-700' :
+                                  'bg-amber-100 text-amber-700'
+                                }`}>
+                                  {applicant.status}
+                                </span>
+                              </div>
+                              
+                              {applicant.message && (
+                                <p className="text-sm text-gray-600 mt-2 bg-white rounded-lg p-2 border border-gray-100">
+                                  "{applicant.message}"
+                                </p>
+                              )}
+
+                              {/* Skills match */}
+                              {applicant.responder_profile?.skills && applicant.responder_profile.skills.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                  {applicant.responder_profile.skills.slice(0, 4).map(skill => (
+                                    <span key={skill} className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
+                                      {skill}
+                                    </span>
+                                  ))}
+                                  {applicant.responder_profile.skills.length > 4 && (
+                                    <span className="text-xs text-gray-400">+{applicant.responder_profile.skills.length - 4} more</span>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Actions for pending applicants */}
+                              {applicant.status === 'pending' && (
+                                <div className="flex gap-2 mt-3">
+                                  <button
+                                    onClick={() => handleApplicantAction(applicant.id, 'accepted')}
+                                    className="flex-1 bg-green-600 text-white text-xs py-2 rounded-lg hover:bg-green-700 transition font-medium"
+                                  >
+                                    ✓ Accept
+                                  </button>
+                                  <button
+                                    onClick={() => handleApplicantAction(applicant.id, 'declined')}
+                                    className="flex-1 bg-gray-200 text-gray-700 text-xs py-2 rounded-lg hover:bg-gray-300 transition font-medium"
+                                  >
+                                    ✗ Decline
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : submitted ? (
                 <div className="text-center py-8">
                   <div className="w-16 h-16 bg-[#E6F4EE] rounded-full flex items-center justify-center mx-auto mb-4">
                     <CheckCircle className="w-8 h-8 text-[#2F8F6B]" />

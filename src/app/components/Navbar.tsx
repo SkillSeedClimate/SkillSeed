@@ -105,16 +105,6 @@ export function Navbar() {
             {user ? (
               /* ── LOGGED IN ── */
               <>
-                <Link
-                  to="/post-project"
-                  className="px-4 py-2 rounded-lg text-sm transition-all"
-                  style={{ color: "#0F3D2E", fontWeight: 600, border: "1.5px solid #0F3D2E" }}
-                  onMouseEnter={e => (e.currentTarget.style.background = "#F0FAF5")}
-                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                >
-                  Post a Project
-                </Link>
-
                 {/* Avatar + Dropdown */}
                 <div className="relative" ref={dropdownRef}>
                   <button
@@ -269,11 +259,6 @@ export function Navbar() {
                   className="text-center px-4 py-2.5 rounded-lg text-sm"
                   style={{ color: "#0F3D2E", fontWeight: 600, border: "1.5px solid #0F3D2E" }}>
                   My Tracker
-                </Link>
-                <Link to="/post-project" onClick={() => setMobileOpen(false)}
-                  className="text-center px-4 py-2.5 rounded-lg text-white text-sm"
-                  style={{ background: "linear-gradient(135deg, #0F3D2E 0%, #2F8F6B 100%)", fontWeight: 600 }}>
-                  Post a Project
                 </Link>
                 <button onClick={() => { signOut(); setMobileOpen(false); navigate("/"); }}
                   className="text-center px-4 py-2.5 rounded-lg text-sm"
