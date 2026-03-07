@@ -292,6 +292,21 @@ ON CONFLICT (id) DO NOTHING;
 
 
 -- =============================================================================
+-- RE-ENABLE FOREIGN KEY CONSTRAINTS FOR POSTGREST RELATIONSHIPS
+-- =============================================================================
+-- Re-add the FK constraints so PostgREST can detect relationships for joins
+-- Note: We only re-add constraints that don't reference auth.users since our
+-- demo data uses fake user IDs. The project_id FK is safe to restore.
+
+ALTER TABLE public.connections 
+  ADD CONSTRAINT connections_project_id_fkey 
+  FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+-- Notify PostgREST to reload the schema cache
+NOTIFY pgrst, 'reload schema';
+
+
+-- =============================================================================
 -- USEFUL QUERIES FOR TESTING
 -- =============================================================================
 

@@ -340,19 +340,32 @@ export async function applyToProject(
   projectId: string, 
   role: 'volunteer' | 'professional',
   message?: string
-): Promise<Connection | null> {
+): Promise<{ connection: Connection | null; error: string | null }> {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user) {
+    console.error('applyToProject: No authenticated user');
+    return { connection: null, error: 'You must be logged in to apply.' };
+  }
 
   // Get project to find poster_id
   const project = await getProjectById(projectId);
-  if (!project) return null;
+  if (!project) {
+    console.error('applyToProject: Project not found:', projectId);
+    return { connection: null, error: 'Project not found.' };
+  }
 
   // Get responder's profile for match score calculation
   const profile = await getCurrentProfile();
   const matchScore = profile?.skills 
     ? profile.skills.filter(s => project.skills_needed.includes(s)).length 
     : 0;
+
+  console.log('applyToProject: Inserting connection', {
+    project_id: projectId,
+    poster_id: project.poster_id,
+    responder_id: user.id,
+    role,
+  });
 
   const { data, error } = await supabase
     .from('connections')
@@ -370,9 +383,17 @@ export async function applyToProject(
 
   if (error) {
     console.error('Error applying to project:', error);
-    return null;
+    if (error.code === '23505') {
+      return { connection: null, error: 'You have already applied to this project.' };
+    }
+    if (error.code === '23503') {
+      return { connection: null, error: 'Database constraint error. Please try again.' };
+    }
+    return { connection: null, error: error.message || 'Failed to submit application.' };
   }
-  return data;
+
+  console.log('applyToProject: Success', data);
+  return { connection: data, error: null };
 }
 
 /**
@@ -421,8 +442,14 @@ export async function getConnectionsForProject(projectId: string): Promise<Conne
  */
 export async function getMyApplications(): Promise<ConnectionWithDetails[]> {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return [];
+  if (!user) {
+    console.log('getMyApplications: No authenticated user');
+    return [];
+  }
 
+  console.log('getMyApplications: Fetching for user', user.id);
+
+  // First, try to fetch with the join (works if FK constraint exists)
   const { data, error } = await supabase
     .from('connections')
     .select(`
@@ -432,10 +459,56 @@ export async function getMyApplications(): Promise<ConnectionWithDetails[]> {
     .eq('responder_id', user.id)
     .order('created_at', { ascending: false });
 
+  // If the join fails due to missing FK relationship, fetch separately
+  if (error && error.code === 'PGRST200') {
+    console.log('getMyApplications: FK relationship not found, fetching separately');
+    
+    // Fetch connections without join
+    const { data: connections, error: connError } = await supabase
+      .from('connections')
+      .select('*')
+      .eq('responder_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (connError) {
+      console.error('Error fetching connections:', connError);
+      return [];
+    }
+
+    if (!connections || connections.length === 0) {
+      console.log('getMyApplications: No connections found');
+      return [];
+    }
+
+    // Fetch all related projects
+    const projectIds = [...new Set(connections.map(c => c.project_id))];
+    const { data: projects, error: projError } = await supabase
+      .from('projects')
+      .select('*')
+      .in('id', projectIds);
+
+    if (projError) {
+      console.error('Error fetching projects:', projError);
+      return connections as ConnectionWithDetails[];
+    }
+
+    // Map projects to connections
+    const projectMap = new Map(projects?.map(p => [p.id, p]) || []);
+    const result = connections.map(c => ({
+      ...c,
+      project: projectMap.get(c.project_id),
+    })) as ConnectionWithDetails[];
+
+    console.log('getMyApplications: Found', result.length, 'applications', result);
+    return result;
+  }
+
   if (error) {
     console.error('Error fetching my applications:', error);
     return [];
   }
+  
+  console.log('getMyApplications: Found', data?.length || 0, 'applications', data);
   return data || [];
 }
 

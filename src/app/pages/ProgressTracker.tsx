@@ -236,10 +236,12 @@ export function ProgressTracker() {
   useEffect(() => {
     async function fetchData() {
       if (!user) {
+        console.log("ProgressTracker: No user, skipping fetch");
         setLoading(false);
         return;
       }
 
+      console.log("ProgressTracker: Fetching data for user", user.id);
       setLoading(true);
       try {
         const [profileData, applicationsData] = await Promise.all([
@@ -247,6 +249,9 @@ export function ProgressTracker() {
           getMyApplications(),
         ]);
 
+        console.log("ProgressTracker: Fetched profile", profileData);
+        console.log("ProgressTracker: Fetched applications", applicationsData?.length || 0, applicationsData);
+        
         setProfile(profileData);
         setApplications(applicationsData);
       } catch (error) {

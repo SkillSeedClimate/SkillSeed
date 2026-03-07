@@ -99,6 +99,136 @@ export interface ProfileWithConnections extends Profile {
 }
 
 // ============================================================================
+// Challenge Types
+// ============================================================================
+
+export type ChallengeStatus = 'active' | 'completed' | 'draft';
+export type ChallengeDifficulty = 'Beginner' | 'Intermediate' | 'Advanced';
+export type ChallengeCategory = 
+  | 'Waste Reduction' 
+  | 'Solar Energy' 
+  | 'Urban Greening' 
+  | 'Water Conservation' 
+  | 'Energy Efficiency'
+  | 'Mixed';
+
+export type ParticipantStatus = 'joined' | 'completed';
+
+export interface Challenge {
+  id: string;
+  creator_id: string | null;
+  title: string;
+  description: string | null;
+  category: ChallengeCategory | string | null;
+  difficulty: ChallengeDifficulty;
+  points_reward: number;
+  participant_count: number;
+  action_count: number;
+  banner_url: string | null;
+  status: ChallengeStatus;
+  deadline: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChallengeParticipant {
+  id: string;
+  challenge_id: string;
+  user_id: string;
+  status: ParticipantStatus;
+  actions_completed: number;
+  points_earned: number;
+  joined_at: string;
+}
+
+export interface LeaderboardEntry {
+  user_id: string;
+  name: string;
+  location: string | null;
+  avatar_url: string | null;
+  total_points: number;
+  missions_completed: number;
+}
+
+// Extended types with relations
+export interface ChallengeWithCreator extends Challenge {
+  creator?: Profile;
+}
+
+export interface ChallengeParticipantWithChallenge extends ChallengeParticipant {
+  challenges?: Challenge;
+}
+
+export interface ChallengeParticipantWithProfile extends ChallengeParticipant {
+  profiles?: Profile;
+}
+
+// Form types for creating challenges
+export interface CreateChallengeInput {
+  title: string;
+  description: string;
+  category: ChallengeCategory | string;
+  difficulty: ChallengeDifficulty;
+  points_reward: number;
+  deadline: string;
+  banner_url?: string;
+}
+
+// ============================================================================
+// Challenge Submission Types
+// ============================================================================
+
+export interface ChallengeSubmission {
+  id: string;
+  challenge_id: string;
+  user_id: string;
+  photo_url: string;
+  reflection: string | null;
+  impact_summary: string | null;
+  like_count: number;
+  created_at: string;
+}
+
+export interface SubmissionLike {
+  id: string;
+  submission_id: string;
+  user_id: string;
+  created_at: string;
+}
+
+// Feed item from the community_feed view
+export interface FeedItem {
+  id: string;
+  challenge_id: string;
+  user_id: string;
+  photo_url: string;
+  reflection: string | null;
+  impact_summary: string | null;
+  like_count: number;
+  created_at: string;
+  challenge_title: string;
+  challenge_category: string | null;
+  challenge_points: number;
+  user_name: string;
+  user_avatar: string | null;
+  user_location: string | null;
+}
+
+// Extended submission with relations
+export interface ChallengeSubmissionWithDetails extends ChallengeSubmission {
+  challenge?: Challenge;
+  profile?: Profile;
+}
+
+// Input type for creating a submission
+export interface CreateSubmissionInput {
+  challenge_id: string;
+  photo_url: string;
+  reflection?: string;
+  impact_summary?: string;
+}
+
+// ============================================================================
 // Insert/Update Types (for forms)
 // ============================================================================
 

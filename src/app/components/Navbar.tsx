@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
-import { Menu, X, Leaf, Sprout, ChevronDown, User, Settings, LogOut, TrendingUp } from "lucide-react";
+import { Menu, X, Sprout, ChevronDown, User, Settings, LogOut, TrendingUp } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 
 const navLinks = [
-  { label: "Match",     href: "/browse",    comingSoon: false },
+  { label: "Work",     href: "/browse",    comingSoon: false },
   { label: "Community", href: "/community", comingSoon: false },
-  { label: "Academy",   href: "/academy",   comingSoon: false },
+  { label: "Hands-on",   href: "/academy",   comingSoon: false },
   { label: "Funding",   href: "/funding",   comingSoon: false },
 ];
 
@@ -61,10 +61,11 @@ export function Navbar() {
 
           {/* ── Logo ── */}
           <Link to="/" className="flex items-center gap-2 shrink-0">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, #0F3D2E 0%, #2F8F6B 100%)" }}>
-              <Leaf className="w-4 h-4 text-white" />
-            </div>
+            <img 
+              src="/logo.png" 
+              alt="SkillSeed Logo" 
+              className="w-8 h-8 object-contain"
+            />
             <span className="text-xl" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, color: "#0F3D2E" }}>
               SkillSeed
             </span>

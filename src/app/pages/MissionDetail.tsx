@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router";
 import {
   MapPin,
@@ -17,8 +17,11 @@ import {
   Bookmark,
   Building2,
   Zap,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import { getProjectById, applyToProject } from "../utils/matchService";
+import type { Project } from "../types/database";
 
 const missionsData: Record<string, any> = {
   "urban-garden": {
@@ -179,14 +182,75 @@ const relatedMissions = [
 export function MissionDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const mission = missionsData[id || "urban-garden"] || missionsData["urban-garden"];
+  const { user, loading: authLoading } = useAuth();
+  
+  // Try to get mock mission data for display fallback
+  const mockMission = missionsData[id || "urban-garden"] || missionsData["urban-garden"];
 
   const [activeRole, setActiveRole] = useState<"volunteer" | "professional">("volunteer");
   const [motivation, setMotivation] = useState("");
   const [availability, setAvailability] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [dbProject, setDbProject] = useState<Project | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [applying, setApplying] = useState(false);
+  const [applyError, setApplyError] = useState<string | null>(null);
+
+  // Fetch project from database
+  useEffect(() => {
+    async function fetchProject() {
+      if (!id) {
+        setLoading(false);
+        return;
+      }
+
+      // Check if ID looks like a UUID (database project)
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+      
+      if (isUUID) {
+        const project = await getProjectById(id);
+        setDbProject(project);
+      }
+      
+      setLoading(false);
+    }
+
+    fetchProject();
+  }, [id]);
+
+  // Build a unified mission object (prefer database, fallback to mock)
+  const mission = dbProject ? {
+    id: dbProject.id,
+    title: dbProject.title,
+    org: "SkillSeed Project", // DB doesn't store org name directly
+    orgType: dbProject.type === 'urgent' ? 'Urgent' : 'Project',
+    location: dbProject.location || 'Remote',
+    region: dbProject.region || 'Global',
+    category: dbProject.focus_area?.[0] || 'Climate Action',
+    difficulty: 'All Levels',
+    duration: dbProject.duration || 'Flexible',
+    startDate: dbProject.start_date ? new Date(dbProject.start_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'TBD',
+    points: dbProject.points,
+    volunteers: 0, // Would need to query connections
+    volunteersNeeded: dbProject.volunteers_needed,
+    professionals: 0,
+    professionalsNeeded: dbProject.professionals_needed,
+    urgent: dbProject.type === 'urgent',
+    image: 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1200',
+    description: dbProject.description || 'Join this climate action project and make a difference.',
+    outcomes: [
+      'Contribute to real climate impact',
+      'Gain hands-on experience',
+      'Connect with like-minded individuals',
+      'Earn impact points and recognition',
+    ],
+    skills: dbProject.skills_needed || [],
+    volunteerSkills: dbProject.skills_needed?.slice(0, 3) || [],
+    professionalSkills: dbProject.skills_needed || [],
+    verified: true,
+    color: dbProject.type === 'urgent' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700',
+  } : mockMission;
 
   // Redirect to auth if not logged in
   const requireAuth = (action: () => void) => {
@@ -209,10 +273,54 @@ export function MissionDetail() {
     });
   };
 
-  const handleApply = (e: React.FormEvent) => {
+  const handleApply = async (e: React.FormEvent) => {
     e.preventDefault();
-    requireAuth(() => setSubmitted(true));
+    setApplyError(null);
+
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+
+    // Must have a real database project to apply
+    if (!dbProject) {
+      setApplyError("This is a demo mission. Please browse real projects to apply.");
+      return;
+    }
+
+    setApplying(true);
+
+    try {
+      const result = await applyToProject(
+        dbProject.id,
+        activeRole,
+        motivation || undefined
+      );
+
+      if (result.connection) {
+        setSubmitted(true);
+      } else {
+        setApplyError(result.error || "Failed to submit application.");
+      }
+    } catch (error) {
+      console.error('Error applying to project:', error);
+      setApplyError("An error occurred while submitting your application. Please try again.");
+    } finally {
+      setApplying(false);
+    }
   };
+
+  // Loading state
+  if (loading || authLoading) {
+    return (
+      <div className="min-h-screen bg-[#F9FDFB] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-[#2F8F6B]" />
+          <p className="text-gray-500">Loading mission details...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F9FDFB]">
@@ -426,12 +534,29 @@ export function MissionDetail() {
                     </select>
                   </div>
 
+                  {/* Error message */}
+                  {applyError && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl p-3">
+                      {applyError}
+                    </div>
+                  )}
+
                   <button
                     type="submit"
-                    className="w-full bg-[#0F3D2E] text-white py-3.5 rounded-xl font-semibold hover:bg-[#2F8F6B] transition-colors flex items-center justify-center gap-2"
+                    disabled={applying}
+                    className="w-full bg-[#0F3D2E] text-white py-3.5 rounded-xl font-semibold hover:bg-[#2F8F6B] transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Apply to Project
-                    <ChevronRight className="w-4 h-4" />
+                    {applying ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        Apply to Project
+                        <ChevronRight className="w-4 h-4" />
+                      </>
+                    )}
                   </button>
                 </form>
               )}

@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { Link } from "react-router";
+import { useState, useEffect, useCallback } from "react";
 import {
   Trophy,
   Users,
@@ -13,151 +12,316 @@ import {
   Share2,
   CheckCircle,
   Leaf,
-  TreePine,
-  Sun,
-  Wrench,
-  Recycle,
   Target,
   Award,
   ArrowUp,
-  Zap,
+  Loader2,
+  Camera,
+  Heart,
 } from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
+import { supabase } from "../utils/supabase";
+import {
+  fetchActiveChallenges,
+  fetchJoinedChallenges,
+  fetchLeaderboard,
+  fetchCommunityStats,
+  fetchUserChallengeStats,
+  fetchUserRank,
+  fetchFeaturedChallenge,
+  joinChallenge,
+  leaveChallenge,
+  createChallenge,
+  subscribeToChallenges,
+  unsubscribeFromChannel,
+  fetchCommunityFeed,
+  fetchUserLikedSubmissions,
+  subscribeToFeed,
+  hasUserSubmitted,
+} from "../utils/challengeService";
+import { CreateChallengeModal } from "../components/CreateChallengeModal";
+import { SubmissionModal } from "../components/SubmissionModal";
+import { FeedCard } from "../components/FeedCard";
+import type { Challenge, LeaderboardEntry, CreateChallengeInput, FeedItem } from "../types/database";
 
-const challenges = [
-  {
-    id: 1,
-    title: "30-Day Zero Waste Challenge",
-    category: "Waste Reduction",
-    image: "https://images.unsplash.com/photo-1759503407810-f0402fd9f237?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
-    participants: 2840,
-    daysLeft: 12,
-    points: 500,
-    joined: true,
-    progress: 65,
-    description: "Reduce household waste to near-zero for 30 days. Document your journey, share tips, and inspire your neighborhood.",
-    icon: <Recycle className="w-5 h-5" />,
-    color: "bg-lime-100 text-lime-700",
-    difficulty: "Intermediate",
-    featured: true,
-  },
-  {
-    id: 2,
-    title: "Plant 100 Trees This Month",
-    category: "Reforestation",
-    image: "https://images.unsplash.com/photo-1752169580565-c2515f8973f1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
-    participants: 1230,
-    daysLeft: 18,
-    points: 400,
-    joined: false,
-    progress: 0,
-    description: "Join thousands of planters worldwide to hit our collective goal of 100,000 trees. Every seedling counts!",
-    icon: <TreePine className="w-5 h-5" />,
-    color: "bg-green-100 text-green-700",
-    difficulty: "All Levels",
-    featured: false,
-  },
-  {
-    id: 3,
-    title: "Energy-Free Weekends",
-    category: "Energy Saving",
-    image: "https://images.unsplash.com/photo-1626793369994-a904d2462888?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
-    participants: 945,
-    daysLeft: 5,
-    points: 300,
-    joined: true,
-    progress: 80,
-    description: "Cut your electricity usage by 50% every weekend for a month. Log your energy savings and see your collective impact.",
-    icon: <Sun className="w-5 h-5" />,
-    color: "bg-amber-100 text-amber-700",
-    difficulty: "Beginner",
-    featured: false,
-  },
-  {
-    id: 4,
-    title: "Community Repair Marathon",
-    category: "Repair Skills",
-    image: "https://images.unsplash.com/photo-1585406666850-82f7532fdae3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
-    participants: 620,
-    daysLeft: 22,
-    points: 350,
-    joined: false,
-    progress: 0,
-    description: "Host or attend a local repair event. Repair items, document them, and together we'll save thousands from the landfill.",
-    icon: <Wrench className="w-5 h-5" />,
-    color: "bg-blue-100 text-blue-700",
-    difficulty: "Beginner",
-    featured: false,
-  },
-  {
-    id: 5,
-    title: "Urban Garden Network",
-    category: "Urban Farming",
-    image: "https://images.unsplash.com/photo-1763897710760-2d47e1fa69ee?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
-    participants: 1780,
-    daysLeft: 30,
-    points: 450,
-    joined: false,
-    progress: 0,
-    description: "Start or contribute to an urban garden in your area. Connect rooftop gardens, balcony farms, and community plots into a city-wide food network.",
-    icon: <Leaf className="w-5 h-5" />,
-    color: "bg-emerald-100 text-emerald-700",
-    difficulty: "Beginner",
-    featured: false,
-  },
-  {
-    id: 6,
-    title: "Climate Action Sprint",
-    category: "Mixed",
-    image: "https://images.unsplash.com/photo-1759503407810-f0402fd9f237?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600",
-    participants: 3200,
-    daysLeft: 7,
-    points: 600,
-    joined: false,
-    progress: 0,
-    description: "A week-long intensive challenge: complete 5 mini-missions across different climate skills areas in 7 days.",
-    icon: <Zap className="w-5 h-5" />,
-    color: "bg-purple-100 text-purple-700",
-    difficulty: "Advanced",
-    featured: true,
-  },
-];
+// Category color mapping
+const CATEGORY_COLORS: Record<string, string> = {
+  "Waste Reduction": "bg-lime-100 text-lime-700",
+  "Solar Energy": "bg-amber-100 text-amber-700",
+  "Urban Greening": "bg-green-100 text-green-700",
+  "Water Conservation": "bg-blue-100 text-blue-700",
+  "Energy Efficiency": "bg-orange-100 text-orange-700",
+  "Mixed": "bg-purple-100 text-purple-700",
+};
 
-const leaderboard = [
-  { rank: 1, name: "Maria Santos", location: "Manila", points: 2840, avatar: "MS", missions: 18, badge: "Forest Guardian" },
-  { rank: 2, name: "James Reyes", location: "Cebu", points: 2610, avatar: "JR", missions: 15, badge: "Solar Expert" },
-  { rank: 3, name: "Ana Lim", location: "Manila", points: 2220, avatar: "AL", missions: 12, badge: "Sapling", isYou: true },
-  { rank: 4, name: "Carlo Mendoza", location: "Davao", points: 1980, avatar: "CM", missions: 11, badge: "Composter" },
-  { rank: 5, name: "Sofia Garcia", location: "Iloilo", points: 1740, avatar: "SG", missions: 9, badge: "Repairer" },
-  { rank: 6, name: "Renz Bautista", location: "Quezon City", points: 1620, avatar: "RB", missions: 8, badge: "First Seed" },
-  { rank: 7, name: "Lia Torres", location: "Cagayan de Oro", points: 1450, avatar: "LT", missions: 7, badge: "First Seed" },
-  { rank: 8, name: "Mark Villanueva", location: "Baguio", points: 1290, avatar: "MV", missions: 6, badge: "First Seed" },
-];
+// Helper to calculate days remaining
+function getDaysRemaining(deadline: string | null): number {
+  if (!deadline) return 30;
+  const now = new Date();
+  const deadlineDate = new Date(deadline);
+  const diffTime = deadlineDate.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return Math.max(0, diffDays);
+}
 
-const communityStats = [
-  { label: "Active Challengers", value: "12,480", icon: <Users className="w-5 h-5" />, color: "text-[#2F8F6B]" },
-  { label: "Challenges Running", value: "24", icon: <Target className="w-5 h-5" />, color: "text-teal-600" },
-  { label: "Impact Actions", value: "89,240", icon: <Leaf className="w-5 h-5" />, color: "text-emerald-600" },
-  { label: "Cities Participating", value: "63", icon: <MapPin className="w-5 h-5" />, color: "text-blue-600" },
-];
+// Helper to get initials from name
+function getInitials(name: string | null): string {
+  if (!name) return "??";
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
 
 export function CommunityChallenges() {
-  const [joinedChallenges, setJoinedChallenges] = useState<number[]>([1, 3]);
-  const [activeTab, setActiveTab] = useState<"all" | "joined" | "featured">("all");
+  const { user } = useAuth();
+  
+  // Data state
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [joinedChallengeIds, setJoinedChallengeIds] = useState<Set<string>>(new Set());
+  const [completedChallengeIds, setCompletedChallengeIds] = useState<Set<string>>(new Set());
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [communityStats, setCommunityStats] = useState({
+    totalChallengers: 0,
+    activeChallenges: 0,
+    totalActions: 0,
+  });
+  const [userStats, setUserStats] = useState({
+    totalPoints: 0,
+    activeChallenges: 0,
+    completedChallenges: 0,
+  });
+  const [userRank, setUserRank] = useState<number | null>(null);
+  const [userProfileId, setUserProfileId] = useState<string | null>(null);
+  const [featuredChallengeId, setFeaturedChallengeId] = useState<string | null>(null);
+  
+  // Feed state
+  const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
+  const [likedSubmissionIds, setLikedSubmissionIds] = useState<Set<string>>(new Set());
 
-  const handleJoin = (id: number) => {
-    setJoinedChallenges(prev =>
-      prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
-    );
+  // UI state
+  const [loading, setLoading] = useState(true);
+  const [joiningId, setJoiningId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"all" | "joined" | "featured" | "feed">("all");
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [submissionModalOpen, setSubmissionModalOpen] = useState(false);
+  const [selectedChallengeForSubmission, setSelectedChallengeForSubmission] = useState<Challenge | null>(null);
+
+  // Fetch user's profile ID
+  const fetchUserProfile = useCallback(async () => {
+    if (!user?.id) return null;
+    const { data } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("user_id", user.id)
+      .single();
+    return data?.id || null;
+  }, [user?.id]);
+
+  // Fetch all data
+  const fetchData = useCallback(async () => {
+    try {
+      // Fetch challenges, community stats, leaderboard, featured challenge, and feed in parallel
+      const [challengesData, statsData, leaderboardData, featuredData, feedData] = await Promise.all([
+        fetchActiveChallenges(),
+        fetchCommunityStats(),
+        fetchLeaderboard(10),
+        fetchFeaturedChallenge(),
+        fetchCommunityFeed(20),
+      ]);
+
+      setChallenges(challengesData);
+      setCommunityStats(statsData);
+      setLeaderboard(leaderboardData);
+      setFeaturedChallengeId(featuredData?.id || null);
+      setFeedItems(feedData);
+
+      // If user is logged in, fetch their data
+      if (user?.id) {
+        const profileId = await fetchUserProfile();
+        setUserProfileId(profileId);
+
+        if (profileId) {
+          const [joinedData, userStatsData, rankData, likedData] = await Promise.all([
+            fetchJoinedChallenges(profileId),
+            fetchUserChallengeStats(profileId),
+            fetchUserRank(profileId),
+            fetchUserLikedSubmissions(profileId),
+          ]);
+
+          setJoinedChallengeIds(new Set(joinedData.map((j) => j.challenge_id)));
+          // Track which joined challenges user has already completed
+          const completedIds = joinedData
+            .filter((j) => j.status === "completed")
+            .map((j) => j.challenge_id);
+          setCompletedChallengeIds(new Set(completedIds));
+          setUserStats(userStatsData);
+          setUserRank(rankData);
+          setLikedSubmissionIds(new Set(likedData));
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, fetchUserProfile]);
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Real-time subscription
+  useEffect(() => {
+    const challengesChannel = subscribeToChallenges(() => {
+      fetchData();
+    });
+    
+    const feedChannel = subscribeToFeed(() => {
+      fetchData();
+    });
+
+    return () => {
+      unsubscribeFromChannel(challengesChannel);
+      unsubscribeFromChannel(feedChannel);
+    };
+  }, [fetchData]);
+
+  // Handle join/leave challenge
+  const handleJoin = async (challengeId: string) => {
+    if (!user || !userProfileId) {
+      // Optionally redirect to login
+      return;
+    }
+
+    setJoiningId(challengeId);
+    try {
+      const isJoined = joinedChallengeIds.has(challengeId);
+      
+      if (isJoined) {
+        await leaveChallenge(challengeId, userProfileId);
+        setJoinedChallengeIds((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(challengeId);
+          return newSet;
+        });
+      } else {
+        await joinChallenge(challengeId, userProfileId);
+        setJoinedChallengeIds((prev) => new Set(prev).add(challengeId));
+      }
+
+      // Refresh data to get updated counts
+      fetchData();
+    } catch (error) {
+      console.error("Error joining/leaving challenge:", error);
+    } finally {
+      setJoiningId(null);
+    }
   };
 
-  const filteredChallenges = challenges.filter(c => {
-    if (activeTab === "joined") return joinedChallenges.includes(c.id);
-    if (activeTab === "featured") return c.featured;
-    return true;
-  });
+  // Handle create challenge
+  const handleCreateChallenge = async (data: CreateChallengeInput) => {
+    if (!userProfileId) return;
+    await createChallenge(userProfileId, data);
+    fetchData();
+  };
+
+  // Handle opening submission modal
+  const handleOpenSubmissionModal = (challenge: Challenge) => {
+    setSelectedChallengeForSubmission(challenge);
+    setSubmissionModalOpen(true);
+  };
+
+  // Handle successful submission
+  const handleSubmissionSuccess = () => {
+    fetchData();
+  };
+
+  // Get challenge status for a user
+  const getChallengeStatus = (challengeId: string): "not-joined" | "joined" | "completed" => {
+    if (completedChallengeIds.has(challengeId)) return "completed";
+    if (joinedChallengeIds.has(challengeId)) return "joined";
+    return "not-joined";
+  };
+
+  // Handle like update from feed card
+  const handleLikeUpdate = (submissionId: string, newCount: number, isLiked: boolean) => {
+    setLikedSubmissionIds((prev) => {
+      const newSet = new Set(prev);
+      if (isLiked) {
+        newSet.add(submissionId);
+      } else {
+        newSet.delete(submissionId);
+      }
+      return newSet;
+    });
+  };
+
+  // Filter and sort challenges - algorithmically computed featured challenge appears first
+  const filteredChallenges = challenges
+    .filter((c) => {
+      if (activeTab === "feed") return false; // Feed tab shows submissions, not challenges
+      if (activeTab === "joined") return joinedChallengeIds.has(c.id);
+      // "Featured" tab shows only the algorithmically computed featured challenge
+      if (activeTab === "featured") return c.id === featuredChallengeId;
+      return true;
+    })
+    .sort((a, b) => {
+      // Featured challenge (computed by activity score) comes first
+      if (a.id === featuredChallengeId) return -1;
+      if (b.id === featuredChallengeId) return 1;
+      // Then sort by deadline (urgent first)
+      return getDaysRemaining(a.deadline) - getDaysRemaining(b.deadline);
+    });
+
+  // Check if a challenge is the featured one
+  const isFeatured = (challengeId: string) => challengeId === featuredChallengeId;
+
+  // Calculate points to next rank
+  const getPointsToNextRank = () => {
+    if (!userRank || userRank <= 1 || leaderboard.length < 2) return null;
+    const currentUserEntry = leaderboard.find((e) => e.user_id === userProfileId);
+    const nextRankEntry = leaderboard[userRank - 2]; // -2 because rank is 1-indexed
+    if (!currentUserEntry || !nextRankEntry) return null;
+    return nextRankEntry.total_points - currentUserEntry.total_points;
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F9FDFB] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-[#2F8F6B]" />
+          <p className="text-gray-500">Loading challenges...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const pointsToNext = getPointsToNextRank();
 
   return (
     <div className="min-h-screen bg-[#F9FDFB]">
+      {/* Create Challenge Modal */}
+      <CreateChallengeModal
+        open={createModalOpen}
+        onOpenChange={setCreateModalOpen}
+        onSubmit={handleCreateChallenge}
+      />
+
+      {/* Submission Modal */}
+      {selectedChallengeForSubmission && userProfileId && (
+        <SubmissionModal
+          open={submissionModalOpen}
+          onOpenChange={setSubmissionModalOpen}
+          challenge={selectedChallengeForSubmission}
+          userId={userProfileId}
+          onSuccess={handleSubmissionSuccess}
+        />
+      )}
+
       {/* Header */}
       <div className="bg-gradient-to-br from-[#0F3D2E] to-[#1A5C43] py-12 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-80 h-80 rounded-full bg-[#2F8F6B]/10 blur-3xl" />
@@ -176,26 +340,55 @@ export function CommunityChallenges() {
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <button className="flex items-center gap-2 bg-[#2F8F6B] text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-[#257A5B] transition-colors">
+              <button
+                onClick={() => setCreateModalOpen(true)}
+                disabled={!user}
+                className="flex items-center gap-2 bg-[#2F8F6B] text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-[#257A5B] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <Plus className="w-4 h-4" />
                 Create Challenge
-              </button>
-              <button className="flex items-center gap-2 bg-white/10 border border-white/20 text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-white/20 transition-colors">
-                <Share2 className="w-4 h-4" />
-                Invite Friends
               </button>
             </div>
           </div>
 
           {/* Community stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8">
-            {communityStats.map((stat) => (
-              <div key={stat.label} className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
-                <div className="flex justify-center mb-1 text-[#6DD4A8]">{stat.icon}</div>
-                <div className="text-2xl font-[Manrope] font-bold text-white">{stat.value}</div>
-                <div className="text-[#A8D5BF] text-xs mt-0.5">{stat.label}</div>
+            <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
+              <div className="flex justify-center mb-1 text-[#6DD4A8]">
+                <Users className="w-5 h-5" />
               </div>
-            ))}
+              <div className="text-2xl font-[Manrope] font-bold text-white">
+                {communityStats.totalChallengers.toLocaleString()}
+              </div>
+              <div className="text-[#A8D5BF] text-xs mt-0.5">Active Challengers</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
+              <div className="flex justify-center mb-1 text-[#6DD4A8]">
+                <Target className="w-5 h-5" />
+              </div>
+              <div className="text-2xl font-[Manrope] font-bold text-white">
+                {communityStats.activeChallenges}
+              </div>
+              <div className="text-[#A8D5BF] text-xs mt-0.5">Challenges Running</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
+              <div className="flex justify-center mb-1 text-[#6DD4A8]">
+                <Leaf className="w-5 h-5" />
+              </div>
+              <div className="text-2xl font-[Manrope] font-bold text-white">
+                {communityStats.totalActions.toLocaleString()}
+              </div>
+              <div className="text-[#A8D5BF] text-xs mt-0.5">Impact Actions</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
+              <div className="flex justify-center mb-1 text-[#6DD4A8]">
+                <MapPin className="w-5 h-5" />
+              </div>
+              <div className="text-2xl font-[Manrope] font-bold text-white">
+                {challenges.length}
+              </div>
+              <div className="text-[#A8D5BF] text-xs mt-0.5">Active Challenges</div>
+            </div>
           </div>
         </div>
       </div>
@@ -206,7 +399,7 @@ export function CommunityChallenges() {
           <div className="lg:col-span-2">
             {/* Tab filter */}
             <div className="flex gap-1 bg-white rounded-xl border border-gray-100 shadow-sm p-1 mb-6 w-fit">
-              {(["all", "featured", "joined"] as const).map(tab => (
+              {(["all", "featured", "joined", "feed"] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -214,189 +407,279 @@ export function CommunityChallenges() {
                     activeTab === tab ? "bg-[#0F3D2E] text-white" : "text-gray-600 hover:bg-[#E6F4EE]"
                   }`}
                 >
-                  {tab === "all" ? "All Challenges" : tab === "featured" ? "🔥 Featured" : `Joined (${joinedChallenges.length})`}
+                  {tab === "all" ? "All Challenges" : tab === "featured" ? "🔥 Top Challenge" : tab === "feed" ? `📸 Feed (${feedItems.length})` : `Joined (${joinedChallengeIds.size})`}
                 </button>
               ))}
             </div>
 
-            <div className="space-y-5">
-              {filteredChallenges.map((challenge) => {
-                const isJoined = joinedChallenges.includes(challenge.id);
-                return (
-                  <div
-                    key={challenge.id}
-                    className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all hover:shadow-md ${
-                      challenge.featured ? "border-[#2F8F6B]/30" : "border-gray-100"
-                    }`}
-                  >
-                    {challenge.featured && (
-                      <div className="bg-gradient-to-r from-[#2F8F6B] to-[#0F3D2E] px-4 py-1.5 flex items-center gap-2">
-                        <Flame className="w-3.5 h-3.5 text-amber-300" />
-                        <span className="text-white text-xs font-bold">FEATURED CHALLENGE</span>
-                      </div>
-                    )}
-                    <div className="flex flex-col sm:flex-row">
-                      <div className="relative sm:w-48 h-40 sm:h-auto flex-shrink-0">
-                        <img src={challenge.image} alt={challenge.title} className="w-full h-full object-cover" />
-                        {challenge.daysLeft <= 7 && (
-                          <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {challenge.daysLeft}d left
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-5 flex-1">
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${challenge.color}`}>
-                                {challenge.category}
-                              </span>
-                              <span className="text-xs text-gray-400">{challenge.difficulty}</span>
-                            </div>
-                            <h3 className="font-[Manrope] font-bold text-[#0F3D2E] text-lg">{challenge.title}</h3>
-                          </div>
-                          <div className="text-right flex-shrink-0">
-                            <div className="text-sm font-bold text-[#2F8F6B] flex items-center gap-1">
-                              <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                              +{challenge.points} pts
-                            </div>
-                          </div>
+            {activeTab === "feed" ? (
+              // Feed view - narrower centered column
+              feedItems.length === 0 ? (
+                <div className="max-w-xl mx-auto">
+                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
+                    <div className="w-16 h-16 rounded-full bg-[#E6F4EE] flex items-center justify-center mx-auto mb-4">
+                      <Camera className="w-8 h-8 text-[#2F8F6B]" />
+                    </div>
+                    <h3 className="font-[Manrope] font-bold text-[#0F3D2E] text-lg mb-2">
+                      No Submissions Yet
+                    </h3>
+                    <p className="text-gray-500 text-sm">
+                      Be the first to complete a challenge and share your impact!
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="max-w-xl mx-auto flex flex-col gap-4 py-4">
+                  {feedItems.map((item) => (
+                    <FeedCard
+                      key={item.id}
+                      item={item}
+                      isLiked={likedSubmissionIds.has(item.id)}
+                      userId={userProfileId}
+                      onLikeUpdate={handleLikeUpdate}
+                    />
+                  ))}
+                </div>
+              )
+            ) : filteredChallenges.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
+                <div className="w-16 h-16 rounded-full bg-[#E6F4EE] flex items-center justify-center mx-auto mb-4">
+                  <Trophy className="w-8 h-8 text-[#2F8F6B]" />
+                </div>
+                <h3 className="font-[Manrope] font-bold text-[#0F3D2E] text-lg mb-2">
+                  {activeTab === "joined" ? "No Joined Challenges" : activeTab === "featured" ? "No Top Challenge Yet" : "No Challenges Found"}
+                </h3>
+                <p className="text-gray-500 text-sm">
+                  {activeTab === "joined"
+                    ? "Join a challenge to start making an impact!"
+                    : activeTab === "featured"
+                    ? "The top challenge is calculated based on activity. Check back soon!"
+                    : "Check back soon for new challenges."}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-5">
+                {filteredChallenges.map((challenge) => {
+                  const challengeStatus = getChallengeStatus(challenge.id);
+                  const isJoined = challengeStatus !== "not-joined";
+                  const isCompleted = challengeStatus === "completed";
+                  const daysLeft = getDaysRemaining(challenge.deadline);
+                  const challengeIsFeatured = isFeatured(challenge.id);
+                  const categoryColor = CATEGORY_COLORS[challenge.category || ""] || "bg-gray-100 text-gray-700";
+
+                  return (
+                    <div
+                      key={challenge.id}
+                      className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all hover:shadow-md ${
+                        challengeIsFeatured ? "border-[#2F8F6B]/30" : "border-gray-100"
+                      }`}
+                    >
+                      {challengeIsFeatured && (
+                        <div className="bg-gradient-to-r from-[#2F8F6B] to-[#0F3D2E] px-4 py-1.5 flex items-center gap-2">
+                          <Flame className="w-3.5 h-3.5 text-amber-300" />
+                          <span className="text-white text-xs font-bold">FEATURED CHALLENGE</span>
                         </div>
-                        <p className="text-sm text-gray-500 leading-relaxed mb-3">{challenge.description}</p>
-                        <div className="flex items-center gap-4 text-xs text-gray-500 mb-4">
-                          <span className="flex items-center gap-1">
-                            <Users className="w-3.5 h-3.5" />
-                            {challenge.participants.toLocaleString()} participants
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5" />
-                            {challenge.daysLeft} days remaining
-                          </span>
-                        </div>
-                        {isJoined && (
-                          <div className="mb-3">
-                            <div className="flex justify-between text-xs mb-1">
-                              <span className="text-gray-500">Your progress</span>
-                              <span className="font-semibold text-[#2F8F6B]">{challenge.progress}%</span>
+                      )}
+                      <div className="flex flex-col sm:flex-row">
+                        <div className="relative sm:w-48 h-40 sm:h-auto flex-shrink-0">
+                          <img
+                            src={challenge.banner_url || "https://images.unsplash.com/photo-1759503407810-f0402fd9f237?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600"}
+                            alt={challenge.title}
+                            className="w-full h-full object-cover"
+                          />
+                          {daysLeft <= 7 && (
+                            <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {daysLeft}d left
                             </div>
-                            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-[#2F8F6B] rounded-full transition-all duration-700"
-                                style={{ width: `${challenge.progress}%` }}
-                              />
+                          )}
+                        </div>
+                        <div className="p-5 flex-1">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${categoryColor}`}>
+                                  {challenge.category || "General"}
+                                </span>
+                                <span className="text-xs text-gray-400">{challenge.difficulty}</span>
+                              </div>
+                              <h3 className="font-[Manrope] font-bold text-[#0F3D2E] text-lg">{challenge.title}</h3>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <div className="text-sm font-bold text-[#2F8F6B] flex items-center gap-1">
+                                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                                +{challenge.points_reward} pts
+                              </div>
                             </div>
                           </div>
-                        )}
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleJoin(challenge.id)}
-                            className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-colors ${
-                              isJoined
-                                ? "bg-[#E6F4EE] text-[#0F3D2E] hover:bg-[#d1ecdf]"
-                                : "bg-[#0F3D2E] text-white hover:bg-[#2F8F6B]"
-                            }`}
-                          >
-                            {isJoined ? (
-                              <span className="flex items-center justify-center gap-1.5">
-                                <CheckCircle className="w-4 h-4" /> Joined
-                              </span>
+                          <p className="text-sm text-gray-500 leading-relaxed mb-3">{challenge.description}</p>
+                          <div className="flex items-center gap-4 text-xs text-gray-500 mb-4">
+                            <span className="flex items-center gap-1">
+                              <Users className="w-3.5 h-3.5" />
+                              {challenge.participant_count.toLocaleString()} participants
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5" />
+                              {daysLeft} days remaining
+                            </span>
+                          </div>
+                          <div className="flex gap-2">
+                            {isCompleted ? (
+                              <div className="flex-1 py-2 rounded-xl text-sm font-semibold bg-emerald-100 text-emerald-700 flex items-center justify-center gap-1.5">
+                                <CheckCircle className="w-4 h-4" /> Completed
+                              </div>
+                            ) : isJoined ? (
+                              <>
+                                <button
+                                  onClick={() => handleOpenSubmissionModal(challenge)}
+                                  disabled={!user}
+                                  className="flex-1 py-2 rounded-xl text-sm font-semibold bg-[#f5a623] text-[#1a3a2a] hover:bg-[#d4891f] transition-colors disabled:opacity-50"
+                                >
+                                  <span className="flex items-center justify-center gap-1.5">
+                                    <Camera className="w-4 h-4" /> Complete Challenge
+                                  </span>
+                                </button>
+                                <button
+                                  onClick={() => handleJoin(challenge.id)}
+                                  disabled={!user || joiningId === challenge.id}
+                                  className="px-3 py-2 rounded-xl border border-gray-200 text-gray-500 hover:border-red-300 hover:text-red-500 transition-colors text-sm"
+                                >
+                                  {joiningId === challenge.id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    "Leave"
+                                  )}
+                                </button>
+                              </>
                             ) : (
-                              <span className="flex items-center justify-center gap-1.5">
-                                <Plus className="w-4 h-4" /> Join Challenge
-                              </span>
+                              <button
+                                onClick={() => handleJoin(challenge.id)}
+                                disabled={!user || joiningId === challenge.id}
+                                className="flex-1 py-2 rounded-xl text-sm font-semibold bg-[#0F3D2E] text-white hover:bg-[#2F8F6B] transition-colors disabled:opacity-50"
+                              >
+                                {joiningId === challenge.id ? (
+                                  <span className="flex items-center justify-center gap-1.5">
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center justify-center gap-1.5">
+                                    <Plus className="w-4 h-4" /> Join Challenge
+                                  </span>
+                                )}
+                              </button>
                             )}
-                          </button>
-                          <button className="px-3 py-2 rounded-xl border border-gray-200 text-gray-500 hover:border-[#2F8F6B]/50 transition-colors">
-                            <Share2 className="w-4 h-4" />
-                          </button>
+                            <button className="px-3 py-2 rounded-xl border border-gray-200 text-gray-500 hover:border-[#2F8F6B]/50 transition-colors">
+                              <Share2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Sidebar — leaderboard */}
           <div className="space-y-5">
+
             {/* Leaderboard */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
               <div className="flex items-center gap-2 mb-4">
                 <Trophy className="w-5 h-5 text-amber-500" />
                 <h3 className="font-[Manrope] font-bold text-[#0F3D2E]">Global Leaderboard</h3>
               </div>
-              <div className="space-y-3">
-                {leaderboard.map((user) => (
-                  <div
-                    key={user.rank}
-                    className={`flex items-center gap-3 p-2 rounded-xl transition-colors ${
-                      user.isYou ? "bg-[#E6F4EE] border border-[#2F8F6B]/20" : "hover:bg-gray-50"
-                    }`}
-                  >
-                    <div
-                      className={`w-6 text-center text-sm font-bold flex-shrink-0 ${
-                        user.rank === 1 ? "text-amber-500" : user.rank === 2 ? "text-gray-400" : user.rank === 3 ? "text-amber-700" : "text-gray-400"
-                      }`}
-                    >
-                      {user.rank <= 3 ? ["🥇", "🥈", "🥉"][user.rank - 1] : user.rank}
-                    </div>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                      user.isYou ? "bg-[#2F8F6B] text-white" : "bg-[#E6F4EE] text-[#0F3D2E]"
-                    }`}>
-                      {user.avatar}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1">
-                        <p className="text-sm font-semibold text-[#0F3D2E] truncate">{user.name}</p>
-                        {user.isYou && <span className="text-xs text-[#2F8F6B] font-medium">(You)</span>}
+              {leaderboard.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-4">No leaderboard data yet</p>
+              ) : (
+                <div className="space-y-3">
+                  {leaderboard.map((entry, index) => {
+                    const rank = index + 1;
+                    const isYou = entry.user_id === userProfileId;
+                    return (
+                      <div
+                        key={entry.user_id}
+                        className={`flex items-center gap-3 p-2 rounded-xl transition-colors ${
+                          isYou ? "bg-[#E6F4EE] border border-[#2F8F6B]/20" : "hover:bg-gray-50"
+                        }`}
+                      >
+                        <div
+                          className={`w-6 text-center text-sm font-bold flex-shrink-0 ${
+                            rank === 1 ? "text-amber-500" : rank === 2 ? "text-gray-400" : rank === 3 ? "text-amber-700" : "text-gray-400"
+                          }`}
+                        >
+                          {rank <= 3 ? ["🥇", "🥈", "🥉"][rank - 1] : rank}
+                        </div>
+                        {entry.avatar_url ? (
+                          <img
+                            src={entry.avatar_url}
+                            alt={entry.name}
+                            className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                          />
+                        ) : (
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                            isYou ? "bg-[#2F8F6B] text-white" : "bg-[#E6F4EE] text-[#0F3D2E]"
+                          }`}>
+                            {getInitials(entry.name)}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1">
+                            <p className="text-sm font-semibold text-[#0F3D2E] truncate">{entry.name}</p>
+                            {isYou && <span className="text-xs text-[#2F8F6B] font-medium">(You)</span>}
+                          </div>
+                          <p className="text-xs text-gray-400">{entry.location || "Unknown"} · {entry.missions_completed} missions</p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-sm font-bold text-[#0F3D2E]">{entry.total_points.toLocaleString()}</p>
+                          <p className="text-xs text-gray-400">pts</p>
+                        </div>
                       </div>
-                      <p className="text-xs text-gray-400">{user.location} · {user.missions} missions</p>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-sm font-bold text-[#0F3D2E]">{user.points.toLocaleString()}</p>
-                      <p className="text-xs text-gray-400">pts</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
               <button className="w-full mt-3 text-sm font-medium text-[#2F8F6B] hover:text-[#0F3D2E] py-2 transition-colors flex items-center justify-center gap-1">
                 Full Leaderboard <ChevronRight className="w-4 h-4" />
               </button>
             </div>
 
             {/* My challenge summary */}
-            <div className="bg-[#0F3D2E] rounded-2xl p-5 text-white">
-              <div className="flex items-center gap-2 mb-4">
-                <Award className="w-5 h-5 text-[#6DD4A8]" />
-                <span className="font-semibold">My Challenge Stats</span>
+            {user && (
+              <div className="bg-[#0F3D2E] rounded-2xl p-5 text-white">
+                <div className="flex items-center gap-2 mb-4">
+                  <Award className="w-5 h-5 text-[#6DD4A8]" />
+                  <span className="font-semibold">My Challenge Stats</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-white/10 rounded-xl p-3 text-center">
+                    <div className="text-2xl font-[Manrope] font-bold text-white">{userStats.activeChallenges}</div>
+                    <div className="text-[#A8D5BF] text-xs mt-0.5">Active</div>
+                  </div>
+                  <div className="bg-white/10 rounded-xl p-3 text-center">
+                    <div className="text-2xl font-[Manrope] font-bold text-white">{userStats.completedChallenges}</div>
+                    <div className="text-[#A8D5BF] text-xs mt-0.5">Completed</div>
+                  </div>
+                  <div className="bg-white/10 rounded-xl p-3 text-center">
+                    <div className="text-2xl font-[Manrope] font-bold text-[#6DD4A8]">{userStats.totalPoints.toLocaleString()}</div>
+                    <div className="text-[#A8D5BF] text-xs mt-0.5">Challenge pts</div>
+                  </div>
+                  <div className="bg-white/10 rounded-xl p-3 text-center">
+                    <div className="text-2xl font-[Manrope] font-bold text-white">#{userRank || "-"}</div>
+                    <div className="text-[#A8D5BF] text-xs mt-0.5">Global rank</div>
+                  </div>
+                </div>
+                {pointsToNext && userRank && userRank > 1 && (
+                  <div className="mt-4 flex items-center gap-2 bg-white/10 rounded-xl p-3">
+                    <ArrowUp className="w-4 h-4 text-[#6DD4A8]" />
+                    <p className="text-[#A8D5BF] text-xs">
+                      You're <span className="text-white font-semibold">{pointsToNext} points</span> away from rank #{userRank - 1}!
+                    </p>
+                  </div>
+                )}
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white/10 rounded-xl p-3 text-center">
-                  <div className="text-2xl font-[Manrope] font-bold text-white">{joinedChallenges.length}</div>
-                  <div className="text-[#A8D5BF] text-xs mt-0.5">Active</div>
-                </div>
-                <div className="bg-white/10 rounded-xl p-3 text-center">
-                  <div className="text-2xl font-[Manrope] font-bold text-white">4</div>
-                  <div className="text-[#A8D5BF] text-xs mt-0.5">Completed</div>
-                </div>
-                <div className="bg-white/10 rounded-xl p-3 text-center">
-                  <div className="text-2xl font-[Manrope] font-bold text-[#6DD4A8]">1,200</div>
-                  <div className="text-[#A8D5BF] text-xs mt-0.5">Challenge pts</div>
-                </div>
-                <div className="bg-white/10 rounded-xl p-3 text-center">
-                  <div className="text-2xl font-[Manrope] font-bold text-white">#3</div>
-                  <div className="text-[#A8D5BF] text-xs mt-0.5">Global rank</div>
-                </div>
-              </div>
-              <div className="mt-4 flex items-center gap-2 bg-white/10 rounded-xl p-3">
-                <ArrowUp className="w-4 h-4 text-[#6DD4A8]" />
-                <p className="text-[#A8D5BF] text-xs">
-                  You're <span className="text-white font-semibold">390 points</span> away from rank #2!
-                </p>
-              </div>
-            </div>
+            )}
 
             {/* Trending skills */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
