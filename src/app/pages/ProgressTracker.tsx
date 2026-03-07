@@ -1,100 +1,154 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import {
   Star,
-  Award,
   TrendingUp,
-  CheckCircle,
   Clock,
   MapPin,
   Leaf,
   Flame,
-  Target,
   Calendar,
   ChevronRight,
   Lock,
   BarChart2,
-  Zap,
   TreePine,
   Sun,
   Wrench,
   Sprout,
   Users,
   BookOpen,
+  Loader2,
 } from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
+import { getCurrentProfile, getMyApplications } from "../utils/matchService";
+import type { Profile, ConnectionWithDetails, Project } from "../types/database";
 
-const applications = [
-  {
-    project: "Coastal Reforestation Drive",
-    org: "Forest Foundation PH",
-    location: "Surigao del Norte",
-    status: "Accepted",
-    appliedDate: "Feb 20, 2026",
-    startDate: "April 5, 2026",
-    role: "Volunteer",
-    points: 300,
-    image: "https://images.unsplash.com/photo-1752169580565-c2515f8973f1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400",
-    category: "Reforestation",
-  },
-  {
-    project: "Urban Rooftop Garden Setup",
-    org: "GreenCity Initiative",
-    location: "Manila, NCR",
-    status: "In Progress",
-    appliedDate: "Jan 15, 2026",
-    startDate: "Mar 15, 2026",
-    role: "Volunteer",
-    points: 150,
-    image: "https://images.unsplash.com/photo-1763897710760-2d47e1fa69ee?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400",
-    category: "Urban Farming",
-  },
-  {
-    project: "Repair Café & Reuse Workshop",
-    org: "Zero Waste Collective",
-    location: "Davao City",
-    status: "Completed",
-    appliedDate: "Dec 1, 2025",
-    startDate: "Jan 10, 2026",
-    role: "Volunteer",
-    points: 100,
-    image: "https://images.unsplash.com/photo-1585406666850-82f7532fdae3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400",
-    category: "Repair Skills",
-  },
-  {
-    project: "Neighborhood Composting Hub",
-    org: "EcoBarangay Network",
-    location: "Quezon City",
-    status: "Completed",
-    appliedDate: "Oct 5, 2025",
-    startDate: "Nov 1, 2025",
-    role: "Volunteer",
-    points: 120,
-    image: "https://images.unsplash.com/photo-1763897710760-2d47e1fa69ee?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400",
-    category: "Composting",
-  },
-  {
-    project: "Community Solar Panel Installation",
-    org: "SolarPH Foundation",
-    location: "Cebu City",
-    status: "Pending Review",
-    appliedDate: "Mar 1, 2026",
-    startDate: "Mar 22, 2026",
-    role: "Professional",
-    points: 250,
-    image: "https://images.unsplash.com/photo-1626793369994-a904d2462888?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400",
-    category: "Energy Saving",
-  },
+// Level configuration based on points
+const LEVELS = [
+  { name: "Seedling", min: 0, max: 100 },
+  { name: "Sprout", min: 100, max: 250 },
+  { name: "Sapling", min: 250, max: 500 },
+  { name: "Tree", min: 500, max: 1000 },
+  { name: "Grove", min: 1000, max: 2000 },
+  { name: "Forest", min: 2000, max: Infinity },
 ];
 
-const badges = [
-  { name: "First Seed", icon: <Sprout className="w-6 h-6" />, desc: "Completed first mission", earned: true, date: "Nov 2025", color: "bg-emerald-100 text-emerald-700" },
-  { name: "Composter", icon: <Leaf className="w-6 h-6" />, desc: "Completed composting mission", earned: true, date: "Nov 2025", color: "bg-lime-100 text-lime-700" },
-  { name: "Repairer", icon: <Wrench className="w-6 h-6" />, desc: "Completed repair skills mission", earned: true, date: "Jan 2026", color: "bg-blue-100 text-blue-700" },
-  { name: "Solar Starter", icon: <Sun className="w-6 h-6" />, desc: "Energy saving mission", earned: false, date: null, color: "bg-amber-100 text-amber-700" },
-  { name: "Forest Guardian", icon: <TreePine className="w-6 h-6" />, desc: "Complete a reforestation mission", earned: false, date: null, color: "bg-green-100 text-green-700" },
-  { name: "Team Leader", icon: <Users className="w-6 h-6" />, desc: "Lead a community challenge", earned: false, date: null, color: "bg-purple-100 text-purple-700" },
+function getLevel(points: number): { level: number; name: string; nextLevel: typeof LEVELS[0] | null; progress: number } {
+  for (let i = 0; i < LEVELS.length; i++) {
+    if (points < LEVELS[i].max) {
+      const current = LEVELS[i];
+      const next = LEVELS[i + 1] || null;
+      const progress = ((points - current.min) / (current.max - current.min)) * 100;
+      return { level: i + 1, name: current.name, nextLevel: next, progress };
+    }
+  }
+  return { level: LEVELS.length, name: LEVELS[LEVELS.length - 1].name, nextLevel: null, progress: 100 };
+}
+
+// Helper to calculate activity streak from connections
+function calculateStreak(connections: ConnectionWithDetails[]): { current: number; longest: number } {
+  if (connections.length === 0) return { current: 0, longest: 0 };
+  
+  // Get all unique activity dates (created_at and updated_at from connections)
+  const activityDates = connections
+    .flatMap(c => [c.created_at, c.updated_at])
+    .filter(Boolean)
+    .map(d => new Date(d!).toDateString())
+    .filter((v, i, a) => a.indexOf(v) === i)
+    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+
+  if (activityDates.length === 0) return { current: 0, longest: 0 };
+
+  const today = new Date().toDateString();
+  const yesterday = new Date(Date.now() - 86400000).toDateString();
+  
+  let current = 0;
+  let longest = 0;
+  let streak = 0;
+  
+  // Check if there's activity today or yesterday
+  const hasRecentActivity = activityDates[0] === today || activityDates[0] === yesterday;
+  
+  for (let i = 0; i < activityDates.length; i++) {
+    const currentDate = new Date(activityDates[i]);
+    const nextDate = activityDates[i + 1] ? new Date(activityDates[i + 1]) : null;
+    
+    streak++;
+    
+    if (nextDate) {
+      const diffDays = Math.floor((currentDate.getTime() - nextDate.getTime()) / 86400000);
+      if (diffDays > 1) {
+        longest = Math.max(longest, streak);
+        if (hasRecentActivity && current === 0) current = streak;
+        streak = 0;
+      }
+    } else {
+      longest = Math.max(longest, streak);
+      if (hasRecentActivity && current === 0) current = streak;
+    }
+  }
+
+  return { current: hasRecentActivity ? Math.max(current, streak) : 0, longest: Math.max(longest, streak) };
+}
+
+// Map connection status to display status
+function getDisplayStatus(connection: ConnectionWithDetails): string {
+  const project = connection.project as Project | undefined;
+  
+  if (project?.status === "completed" && connection.status === "accepted") {
+    return "Completed";
+  }
+  if (connection.status === "accepted" && project?.status === "in-progress") {
+    return "In Progress";
+  }
+  if (connection.status === "accepted") {
+    return "Accepted";
+  }
+  if (connection.status === "pending") {
+    return "Pending Review";
+  }
+  if (connection.status === "declined") {
+    return "Declined";
+  }
+  return "Unknown";
+}
+
+// Get project image based on focus area
+function getProjectImage(focusArea: string[] | undefined): string {
+  const area = focusArea?.[0]?.toLowerCase() || '';
+  
+  if (area.includes('solar') || area.includes('energy') || area.includes('renewable')) {
+    return 'https://images.unsplash.com/photo-1559302504-64aae6ca6b6d?w=600&fit=crop';
+  }
+  if (area.includes('forest') || area.includes('conservation') || area.includes('reforestation')) {
+    return 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=600&fit=crop';
+  }
+  if (area.includes('education') || area.includes('technology') || area.includes('literacy')) {
+    return 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&fit=crop';
+  }
+  if (area.includes('water') || area.includes('ocean') || area.includes('marine')) {
+    return 'https://images.unsplash.com/photo-1618477461853-cf6ed80faba5?w=600&fit=crop';
+  }
+  if (area.includes('urban') || area.includes('infrastructure') || area.includes('city')) {
+    return 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&fit=crop';
+  }
+  if (area.includes('disaster') || area.includes('emergency')) {
+    return 'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=600&fit=crop';
+  }
+  return 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=600&fit=crop';
+}
+
+// Static badges configuration
+const BADGES_CONFIG = [
+  { name: "First Seed", icon: <Sprout className="w-6 h-6" />, desc: "Completed first mission", color: "bg-emerald-100 text-emerald-700", requirement: "first_mission" },
+  { name: "Composter", icon: <Leaf className="w-6 h-6" />, desc: "Completed composting mission", color: "bg-lime-100 text-lime-700", requirement: "composting" },
+  { name: "Repairer", icon: <Wrench className="w-6 h-6" />, desc: "Completed repair skills mission", color: "bg-blue-100 text-blue-700", requirement: "repair" },
+  { name: "Solar Starter", icon: <Sun className="w-6 h-6" />, desc: "Energy saving mission", color: "bg-amber-100 text-amber-700", requirement: "energy" },
+  { name: "Forest Guardian", icon: <TreePine className="w-6 h-6" />, desc: "Complete a reforestation mission", color: "bg-green-100 text-green-700", requirement: "reforestation" },
+  { name: "Team Leader", icon: <Users className="w-6 h-6" />, desc: "Lead a community challenge", color: "bg-purple-100 text-purple-700", requirement: "team_lead" },
 ];
 
+// Static impact stats (as requested - don't change for now)
 const impactStats = [
   { label: "CO₂ Offset", value: "124 kg", icon: <Leaf className="w-5 h-5" />, color: "text-[#2F8F6B]" },
   { label: "Trees Planted", value: "42", icon: <TreePine className="w-5 h-5" />, color: "text-green-600" },
@@ -102,12 +156,161 @@ const impactStats = [
   { label: "People Reached", value: "380", icon: <Users className="w-5 h-5" />, color: "text-teal-600" },
 ];
 
-const completedMissions = applications.filter(a => a.status === "Completed");
-const totalPoints = completedMissions.reduce((sum, a) => sum + a.points, 0);
-const profileCompletion = 72;
+// Calculate profile completion percentage
+function calculateProfileCompletion(profile: Profile | null): number {
+  if (!profile) return 0;
+  
+  let score = 0;
+  const fields = [
+    { field: profile.name, weight: 20 },
+    { field: profile.bio, weight: 15 },
+    { field: profile.location, weight: 15 },
+    { field: profile.skills?.length > 0, weight: 20 },
+    { field: profile.availability, weight: 10 },
+    { field: profile.avatar_url, weight: 10 },
+    { field: profile.credentials_url, weight: 10 },
+  ];
+  
+  fields.forEach(({ field, weight }) => {
+    if (field) score += weight;
+  });
+  
+  return score;
+}
+
+// Get earned badges based on completed missions
+function getEarnedBadges(connections: ConnectionWithDetails[]) {
+  const completedConnections = connections.filter(c => {
+    const project = c.project as Project | undefined;
+    return c.status === "accepted" && project?.status === "completed";
+  });
+
+  return BADGES_CONFIG.map(badge => {
+    let earned = false;
+    let date: string | null = null;
+
+    if (badge.requirement === "first_mission" && completedConnections.length > 0) {
+      earned = true;
+      date = new Date(completedConnections[completedConnections.length - 1].created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    }
+
+    // Check for specific focus areas
+    const focusAreas = completedConnections.map(c => (c.project as Project)?.focus_area || []).flat();
+    const focusAreaLower = focusAreas.map(f => f.toLowerCase());
+
+    if (badge.requirement === "composting" && focusAreaLower.some(f => f.includes("composting") || f.includes("waste"))) {
+      earned = true;
+      const c = completedConnections.find(c => (c.project as Project)?.focus_area?.some(f => f.toLowerCase().includes("composting") || f.toLowerCase().includes("waste")));
+      if (c) date = new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    }
+
+    if (badge.requirement === "repair" && focusAreaLower.some(f => f.includes("repair"))) {
+      earned = true;
+      const c = completedConnections.find(c => (c.project as Project)?.focus_area?.some(f => f.toLowerCase().includes("repair")));
+      if (c) date = new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    }
+
+    if (badge.requirement === "energy" && focusAreaLower.some(f => f.includes("energy") || f.includes("solar"))) {
+      earned = true;
+      const c = completedConnections.find(c => (c.project as Project)?.focus_area?.some(f => f.toLowerCase().includes("energy") || f.toLowerCase().includes("solar")));
+      if (c) date = new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    }
+
+    if (badge.requirement === "reforestation" && focusAreaLower.some(f => f.includes("forest") || f.includes("reforestation") || f.includes("conservation"))) {
+      earned = true;
+      const c = completedConnections.find(c => (c.project as Project)?.focus_area?.some(f => f.toLowerCase().includes("forest") || f.toLowerCase().includes("reforestation")));
+      if (c) date = new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    }
+
+    return { ...badge, earned, date };
+  });
+}
 
 export function ProgressTracker() {
+  const { user, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<"overview" | "applications" | "badges">("overview");
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [applications, setApplications] = useState<ConnectionWithDetails[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const [profileData, applicationsData] = await Promise.all([
+          getCurrentProfile(),
+          getMyApplications(),
+        ]);
+
+        setProfile(profileData);
+        setApplications(applicationsData);
+      } catch (error) {
+        console.error("Error fetching progress data:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (!authLoading) {
+      fetchData();
+    }
+  }, [user, authLoading]);
+
+  // Calculate totals from real data
+  const completedMissions = applications.filter(c => {
+    const project = c.project as Project | undefined;
+    return c.status === "accepted" && project?.status === "completed";
+  });
+
+  const totalPoints = completedMissions.reduce((sum, c) => {
+    const project = c.project as Project | undefined;
+    return sum + (project?.points || 0);
+  }, 0);
+
+  const levelInfo = getLevel(totalPoints);
+  const profileCompletion = calculateProfileCompletion(profile);
+  const streak = calculateStreak(applications);
+  const badges = getEarnedBadges(applications);
+
+  // Get user initials
+  const userInitials = profile?.name
+    ? profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    : user?.email?.slice(0, 2).toUpperCase() || 'U';
+
+  // Format member since date
+  const memberSince = profile?.created_at
+    ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    : '';
+
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-screen bg-[#F9FDFB] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-[#2F8F6B]" />
+          <p className="text-gray-500">Loading your progress...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-[#F9FDFB] flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-[#0F3D2E] mb-2">Please sign in</h2>
+          <p className="text-gray-500 mb-4">You need to be logged in to view your progress.</p>
+          <Link to="/auth" className="text-[#2F8F6B] font-semibold hover:underline">
+            Sign in →
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const statusColor: Record<string, string> = {
     "Accepted": "bg-green-100 text-green-700",
@@ -124,20 +327,32 @@ export function ProgressTracker() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row md:items-center gap-6">
             {/* Avatar */}
-            <div className="w-20 h-20 bg-[#2F8F6B] rounded-2xl flex items-center justify-center text-white text-2xl font-bold font-[Manrope] flex-shrink-0">
-              AL
-            </div>
+            {profile?.avatar_url ? (
+              <img 
+                src={profile.avatar_url} 
+                alt={profile.name} 
+                className="w-20 h-20 rounded-2xl object-cover flex-shrink-0"
+              />
+            ) : (
+              <div className="w-20 h-20 bg-[#2F8F6B] rounded-2xl flex items-center justify-center text-white text-2xl font-bold font-[Manrope] flex-shrink-0">
+                {userInitials}
+              </div>
+            )}
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-3 mb-1">
-                <h1 className="text-white font-[Manrope] font-bold text-2xl">Ana Lim</h1>
-                <span className="bg-[#2F8F6B]/30 text-[#6DD4A8] text-xs font-semibold px-2.5 py-1 rounded-full">
-                  Climate Volunteer
+                <h1 className="text-white font-[Manrope] font-bold text-2xl">{profile?.name || user?.email}</h1>
+                <span className="bg-[#2F8F6B]/30 text-[#6DD4A8] text-xs font-semibold px-2.5 py-1 rounded-full capitalize">
+                  {profile?.role_type || 'Climate Volunteer'}
                 </span>
-                <span className="bg-white/10 text-white/80 text-xs font-medium px-2.5 py-1 rounded-full flex items-center gap-1">
-                  <MapPin className="w-3 h-3" /> Manila, NCR
-                </span>
+                {profile?.location && (
+                  <span className="bg-white/10 text-white/80 text-xs font-medium px-2.5 py-1 rounded-full flex items-center gap-1">
+                    <MapPin className="w-3 h-3" /> {profile.location}
+                  </span>
+                )}
               </div>
-              <p className="text-[#A8D5BF] text-sm">Member since October 2025 · {completedMissions.length} missions completed</p>
+              <p className="text-[#A8D5BF] text-sm">
+                {memberSince && `Member since ${memberSince} · `}{completedMissions.length} mission{completedMissions.length !== 1 ? 's' : ''} completed
+              </p>
               {/* Profile completion bar */}
               <div className="mt-4 max-w-sm">
                 <div className="flex justify-between text-xs text-[#A8D5BF] mb-1.5">
@@ -150,7 +365,9 @@ export function ProgressTracker() {
                     style={{ width: `${profileCompletion}%` }}
                   />
                 </div>
-                <p className="text-xs text-[#A8D5BF] mt-1">Add credentials to complete your profile</p>
+                <p className="text-xs text-[#A8D5BF] mt-1">
+                  {profileCompletion < 100 ? 'Add more details to complete your profile' : 'Profile complete!'}
+                </p>
               </div>
             </div>
             {/* Total points */}
@@ -160,7 +377,7 @@ export function ProgressTracker() {
                 <span className="text-[#A8D5BF] text-xs font-medium">Total Points</span>
               </div>
               <div className="text-3xl font-[Manrope] font-bold text-white">{totalPoints}</div>
-              <p className="text-[#6DD4A8] text-xs mt-0.5">Level 4 · Sapling</p>
+              <p className="text-[#6DD4A8] text-xs mt-0.5">Level {levelInfo.level} · {levelInfo.name}</p>
             </div>
           </div>
         </div>
@@ -211,13 +428,13 @@ export function ProgressTracker() {
                     <p className="text-xs text-gray-500">Keep the momentum going!</p>
                   </div>
                 </div>
-                <div className="text-4xl font-[Manrope] font-bold text-[#0F3D2E] mb-1">14 days</div>
-                <p className="text-sm text-gray-500">Your longest streak: <span className="font-semibold text-[#2F8F6B]">21 days</span></p>
+                <div className="text-4xl font-[Manrope] font-bold text-[#0F3D2E] mb-1">{streak.current} day{streak.current !== 1 ? 's' : ''}</div>
+                <p className="text-sm text-gray-500">Your longest streak: <span className="font-semibold text-[#2F8F6B]">{streak.longest} days</span></p>
                 <div className="flex gap-1.5 mt-4">
-                  {Array.from({ length: 14 }).map((_, i) => (
-                    <div key={i} className={`h-5 flex-1 rounded-sm ${i < 14 ? "bg-[#2F8F6B]" : "bg-gray-100"}`} />
+                  {Array.from({ length: Math.min(streak.current, 21) }).map((_, i) => (
+                    <div key={i} className="h-5 flex-1 rounded-sm bg-[#2F8F6B]" />
                   ))}
-                  {Array.from({ length: 7 }).map((_, i) => (
+                  {Array.from({ length: Math.max(0, 21 - streak.current) }).map((_, i) => (
                     <div key={`e-${i}`} className="h-5 flex-1 rounded-sm bg-gray-100" />
                   ))}
                 </div>
@@ -231,7 +448,9 @@ export function ProgressTracker() {
                   </div>
                   <div>
                     <h3 className="font-[Manrope] font-bold text-[#0F3D2E]">Level Progress</h3>
-                    <p className="text-xs text-gray-500">Level 4 → Level 5: Tree</p>
+                    <p className="text-xs text-gray-500">
+                      Level {levelInfo.level} {levelInfo.nextLevel ? `→ Level ${levelInfo.level + 1}: ${levelInfo.nextLevel.name}` : '(Max Level!)'}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-end gap-3 mb-3">
@@ -239,18 +458,24 @@ export function ProgressTracker() {
                     <p className="text-3xl font-[Manrope] font-bold text-[#0F3D2E]">{totalPoints}</p>
                     <p className="text-xs text-gray-500">current points</p>
                   </div>
-                  <div className="text-gray-300 text-2xl mb-1">/</div>
-                  <div>
-                    <p className="text-2xl font-[Manrope] font-bold text-gray-400">600</p>
-                    <p className="text-xs text-gray-500">to level 5</p>
-                  </div>
+                  {levelInfo.nextLevel && (
+                    <>
+                      <div className="text-gray-300 text-2xl mb-1">/</div>
+                      <div>
+                        <p className="text-2xl font-[Manrope] font-bold text-gray-400">{levelInfo.nextLevel.min}</p>
+                        <p className="text-xs text-gray-500">to level {levelInfo.level + 1}</p>
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-[#2F8F6B] to-[#6DD4A8] rounded-full" style={{ width: `${(totalPoints / 600) * 100}%` }} />
+                  <div className="h-full bg-gradient-to-r from-[#2F8F6B] to-[#6DD4A8] rounded-full" style={{ width: `${levelInfo.progress}%` }} />
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  {600 - totalPoints} more points to reach <span className="font-semibold text-[#2F8F6B]">Tree level</span>
-                </p>
+                {levelInfo.nextLevel && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    {levelInfo.nextLevel.min - totalPoints} more points to reach <span className="font-semibold text-[#2F8F6B]">{levelInfo.nextLevel.name} level</span>
+                  </p>
+                )}
               </div>
             </div>
 
@@ -262,52 +487,43 @@ export function ProgressTracker() {
                   View all <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {applications.slice(0, 4).map((app) => (
-                  <div key={app.project} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-center gap-4">
-                    <img src={app.image} alt={app.project} className="w-14 h-14 rounded-xl object-cover flex-shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <h4 className="font-semibold text-[#0F3D2E] text-sm leading-tight truncate">{app.project}</h4>
-                      <p className="text-xs text-gray-500 mt-0.5">{app.org}</p>
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusColor[app.status] || "bg-gray-100 text-gray-600"}`}>
-                          {app.status}
-                        </span>
-                        <span className="text-xs text-[#2F8F6B] font-semibold flex items-center gap-0.5">
-                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                          +{app.points}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Coming Soon sections */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[
-                { title: "Climate Tracker", desc: "Track your personal carbon footprint reduction over time", icon: <BarChart2 className="w-6 h-6" /> },
-                { title: "Academy Missions", desc: "Structured learning paths with expert-led video courses", icon: <BookOpen className="w-6 h-6" /> },
-              ].map((item) => (
-                <div key={item.title} className="bg-gray-50 rounded-2xl border border-gray-100 p-5 relative overflow-hidden">
-                  <div className="absolute inset-0 flex items-center justify-center backdrop-blur-sm bg-white/60 z-10 rounded-2xl">
-                    <div className="text-center">
-                      <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-2">
-                        <Lock className="w-5 h-5 text-gray-400" />
-                      </div>
-                      <span className="text-xs font-bold text-gray-500 bg-gray-200 px-3 py-1 rounded-full">Coming Soon</span>
-                    </div>
-                  </div>
-                  <div className="opacity-30">
-                    <div className="w-10 h-10 bg-[#E6F4EE] rounded-xl flex items-center justify-center mb-3 text-[#2F8F6B]">
-                      {item.icon}
-                    </div>
-                    <h3 className="font-[Manrope] font-bold text-[#0F3D2E]">{item.title}</h3>
-                    <p className="text-sm text-gray-500 mt-1">{item.desc}</p>
-                  </div>
+              {applications.length === 0 ? (
+                <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-8 text-center">
+                  <p className="text-gray-500">No missions yet. Start exploring and apply to missions!</p>
+                  <Link to="/missions" className="inline-block mt-4 text-[#2F8F6B] font-semibold hover:underline">
+                    Browse missions →
+                  </Link>
                 </div>
-              ))}
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {applications.slice(0, 4).map((app) => {
+                    const project = app.project as Project;
+                    const displayStatus = getDisplayStatus(app);
+                    return (
+                      <div key={app.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-center gap-4">
+                        <img 
+                          src={getProjectImage(project?.focus_area)} 
+                          alt={project?.title || 'Mission'} 
+                          className="w-14 h-14 rounded-xl object-cover flex-shrink-0" 
+                        />
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-semibold text-[#0F3D2E] text-sm leading-tight truncate">{project?.title || 'Unknown Mission'}</h4>
+                          <p className="text-xs text-gray-500 mt-0.5">{project?.location || 'Remote'}</p>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusColor[displayStatus] || "bg-gray-100 text-gray-600"}`}>
+                              {displayStatus}
+                            </span>
+                            <span className="text-xs text-[#2F8F6B] font-semibold flex items-center gap-0.5">
+                              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                              +{project?.points || 0}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -315,45 +531,67 @@ export function ProgressTracker() {
         {activeTab === "applications" && (
           <div className="space-y-4">
             <h2 className="font-[Manrope] font-bold text-[#0F3D2E] text-xl mb-2">My Applications</h2>
-            {applications.map((app) => (
-              <div key={app.project} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                  <img src={app.image} alt={app.project} className="w-full sm:w-20 h-20 sm:h-20 rounded-xl object-cover flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <h3 className="font-[Manrope] font-bold text-[#0F3D2E]">{app.project}</h3>
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${statusColor[app.status] || "bg-gray-100 text-gray-600"}`}>
-                        {app.status}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-500">{app.org}</p>
-                    <div className="flex flex-wrap gap-3 mt-2 text-xs text-gray-500">
-                      <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{app.location}</span>
-                      <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />Applied {app.appliedDate}</span>
-                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" />Starts {app.startDate}</span>
-                      <span className="font-medium text-[#0F3D2E] bg-[#E6F4EE] px-1.5 rounded">{app.role}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-center">
-                      <div className="text-xl font-[Manrope] font-bold text-[#2F8F6B] flex items-center gap-1">
-                        <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                        +{app.points}
-                      </div>
-                      <div className="text-xs text-gray-400">points</div>
-                    </div>
-                    {app.status !== "Completed" && (
-                      <Link
-                        to={`/missions/${app.project.toLowerCase().replace(/\s+/g, "-")}`}
-                        className="text-sm font-semibold text-[#2F8F6B] border border-[#2F8F6B]/30 px-3 py-1.5 rounded-lg hover:bg-[#E6F4EE] transition-colors whitespace-nowrap"
-                      >
-                        View →
-                      </Link>
-                    )}
-                  </div>
-                </div>
+            {applications.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
+                <p className="text-gray-500">No applications yet. Start exploring and apply to missions!</p>
+                <Link to="/missions" className="inline-block mt-4 text-[#2F8F6B] font-semibold hover:underline">
+                  Browse missions →
+                </Link>
               </div>
-            ))}
+            ) : (
+              applications.map((app) => {
+                const project = app.project as Project;
+                const displayStatus = getDisplayStatus(app);
+                const appliedDate = new Date(app.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const startDate = project?.start_date 
+                  ? new Date(project.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                  : 'TBD';
+
+                return (
+                  <div key={app.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                      <img 
+                        src={getProjectImage(project?.focus_area)} 
+                        alt={project?.title || 'Mission'} 
+                        className="w-full sm:w-20 h-20 sm:h-20 rounded-xl object-cover flex-shrink-0" 
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <h3 className="font-[Manrope] font-bold text-[#0F3D2E]">{project?.title || 'Unknown Mission'}</h3>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${statusColor[displayStatus] || "bg-gray-100 text-gray-600"}`}>
+                            {displayStatus}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-500">{project?.region || 'Global'}</p>
+                        <div className="flex flex-wrap gap-3 mt-2 text-xs text-gray-500">
+                          <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{project?.location || 'Remote'}</span>
+                          <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />Applied {appliedDate}</span>
+                          <span className="flex items-center gap-1"><Clock className="w-3 h-3" />Starts {startDate}</span>
+                          <span className="font-medium text-[#0F3D2E] bg-[#E6F4EE] px-1.5 rounded capitalize">{app.role}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="text-center">
+                          <div className="text-xl font-[Manrope] font-bold text-[#2F8F6B] flex items-center gap-1">
+                            <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                            +{project?.points || 0}
+                          </div>
+                          <div className="text-xs text-gray-400">points</div>
+                        </div>
+                        {displayStatus !== "Completed" && project?.id && (
+                          <Link
+                            to={`/missions/${project.id}`}
+                            className="text-sm font-semibold text-[#2F8F6B] border border-[#2F8F6B]/30 px-3 py-1.5 rounded-lg hover:bg-[#E6F4EE] transition-colors whitespace-nowrap"
+                          >
+                            View →
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         )}
 

@@ -51,19 +51,67 @@ function getCategoryStyle(focusArea: string[] | undefined): { color: string; ico
   return { color: 'bg-lime-100 text-lime-700', icon: <Recycle className="w-4 h-4" /> };
 }
 
-// Get a placeholder image based on focus area
+// Get a placeholder image based on focus area - community building mission style
 function getProjectImage(focusArea: string[] | undefined): string {
   const area = focusArea?.[0]?.toLowerCase() || '';
+  
+  // Energy / Solar / Renewable - people installing solar panels
   if (area.includes('solar') || area.includes('energy') || area.includes('renewable')) {
-    return 'https://images.unsplash.com/photo-1626793369994-a904d2462888?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600';
+    return 'https://images.unsplash.com/photo-1559302504-64aae6ca6b6d?w=600&fit=crop';
   }
-  if (area.includes('forest') || area.includes('conservation')) {
-    return 'https://images.unsplash.com/photo-1752169580565-c2515f8973f1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600';
+  
+  // Forest / Conservation / Reforestation - volunteers planting trees
+  if (area.includes('forest') || area.includes('conservation') || area.includes('reforestation')) {
+    return 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=600&fit=crop';
   }
-  if (area.includes('education') || area.includes('technology')) {
-    return 'https://images.unsplash.com/photo-1585406666850-82f7532fdae3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600';
+  
+  // Education / Technology - workshop/training session
+  if (area.includes('education') || area.includes('technology') || area.includes('literacy')) {
+    return 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&fit=crop';
   }
-  return 'https://images.unsplash.com/photo-1763897710760-2d47e1fa69ee?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600';
+  
+  // Water / Ocean - beach cleanup volunteers
+  if (area.includes('water') || area.includes('ocean') || area.includes('marine')) {
+    return 'https://images.unsplash.com/photo-1618477461853-cf6ed80faba5?w=600&fit=crop';
+  }
+  
+  // Urban / Infrastructure / City - community garden
+  if (area.includes('urban') || area.includes('infrastructure') || area.includes('city')) {
+    return 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&fit=crop';
+  }
+  
+  // Climate Science / Research - team collaboration
+  if (area.includes('climate science') || area.includes('research') || area.includes('data')) {
+    return 'https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=600&fit=crop';
+  }
+  
+  // Policy / Finance / Advocacy - community meeting
+  if (area.includes('policy') || area.includes('finance') || area.includes('advocacy')) {
+    return 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=600&fit=crop';
+  }
+  
+  // Community / Grassroots - volunteers group
+  if (area.includes('community') || area.includes('grassroots') || area.includes('volunteer')) {
+    return 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=600&fit=crop';
+  }
+  
+  // Disaster Response / Emergency - volunteers helping community
+  if (area.includes('disaster') || area.includes('emergency') || area.includes('relief')) {
+    return 'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=600&fit=crop';
+  }
+  
+  // Agriculture / Food - community farming
+  if (area.includes('agriculture') || area.includes('food') || area.includes('farming')) {
+    return 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&fit=crop';
+  }
+  
+  // Storytelling / Media / Documentary - team filming
+  if (area.includes('storytelling') || area.includes('media') || area.includes('documentary')) {
+    return 'https://images.unsplash.com/photo-1529070538774-1843cb3265df?w=600&fit=crop';
+  }
+  
+  // Default - diverse team collaboration
+  return 'https://images.unsplash.com/photo-1531206715517-5c0ba140b2b8?w=600&fit=crop';
 }
 
 const categories = ["All", "climate science", "renewable energy", "education", "urban planning", "climate finance", "technology", "advocacy"];

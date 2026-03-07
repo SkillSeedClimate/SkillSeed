@@ -114,11 +114,17 @@ CREATE POLICY "Users can insert own profile"
   WITH CHECK (auth.uid() = user_id);
 
 -- PROJECTS POLICIES
--- Anyone authenticated can view open projects
-CREATE POLICY "Projects are viewable by authenticated users"
+-- Anyone can view open projects (including anonymous users for public browsing)
+CREATE POLICY "Open projects are viewable by everyone"
+  ON public.projects FOR SELECT
+  TO anon, authenticated
+  USING (status = 'open');
+
+-- Authenticated users can also see their own projects regardless of status
+CREATE POLICY "Users can view own projects"
   ON public.projects FOR SELECT
   TO authenticated
-  USING (true);
+  USING (auth.uid() = poster_id);
 
 -- Only poster can create projects (poster_id must match auth.uid())
 CREATE POLICY "Posters can create projects"
