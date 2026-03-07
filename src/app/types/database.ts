@@ -47,6 +47,9 @@ export interface Project {
   duration: string | null;
   start_date: string | null;
   points: number;
+  compensation_min: number | null;
+  compensation_max: number | null;
+  compensation_currency: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -275,6 +278,9 @@ export interface ProjectInsert {
   duration?: string | null;
   start_date?: string | null;
   points?: number;
+  compensation_min?: number | null;
+  compensation_max?: number | null;
+  compensation_currency?: string | null;
 }
 
 export interface ProjectUpdate {
@@ -291,6 +297,9 @@ export interface ProjectUpdate {
   duration?: string | null;
   start_date?: string | null;
   points?: number;
+  compensation_min?: number | null;
+  compensation_max?: number | null;
+  compensation_currency?: string | null;
 }
 
 export interface ConnectionInsert {

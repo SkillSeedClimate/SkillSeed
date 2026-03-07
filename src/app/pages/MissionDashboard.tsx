@@ -19,9 +19,10 @@ import {
   Briefcase,
   Heart,
   BookOpen,
+  Trash2,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
-import { getProjects, getMyProjects } from "../utils/matchService";
+import { getProjects, getMyProjects, deleteProject } from "../utils/matchService";
 import type { Project } from "../types/database";
 
 // Helper function to get category color based on focus area
@@ -434,6 +435,23 @@ export function MissionDashboard() {
                           )}
                         </div>
 
+                        {/* Compensation badge - Professionals tab only */}
+                        {(mission.professionals_needed ?? 0) > 0 && workTab === 'professionals' && (
+                          <div className="mb-3">
+                            {mission.compensation_min ? (
+                              <span className="bg-blue-50 border border-blue-100 text-blue-700 
+                                               text-xs font-semibold px-3 py-1 rounded-full">
+                                💰 ₱{mission.compensation_min.toLocaleString()} – ₱{mission.compensation_max?.toLocaleString()}
+                              </span>
+                            ) : (
+                              <span className="bg-gray-50 border border-gray-100 text-gray-400 
+                                               text-xs px-3 py-1 rounded-full">
+                                💰 Compensation negotiable
+                              </span>
+                            )}
+                          </div>
+                        )}
+
                         {/* Skills needed — max 3 shown */}
                         <div className="flex flex-wrap gap-1 mb-4">
                           {mission.skills_needed?.slice(0, 3).map(skill => (
@@ -499,7 +517,7 @@ export function MissionDashboard() {
                         </div>
                         <p className="text-sm text-gray-600 mt-2 line-clamp-2">{mission.description}</p>
                         <div className="flex items-center justify-between mt-3">
-                          <div className="flex gap-3 text-xs text-gray-500">
+                          <div className="flex gap-3 text-xs text-gray-500 flex-wrap items-center">
                             <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{mission.duration || "Flexible"}</span>
                             {(mission.volunteers_needed ?? 0) > 0 && (
                               <span className="flex items-center gap-1 text-green-700">
@@ -510,6 +528,20 @@ export function MissionDashboard() {
                               <span className="flex items-center gap-1 text-blue-700">
                                 <Briefcase className="w-3 h-3" />{mission.professionals_needed} professionals
                               </span>
+                            )}
+                            {/* Compensation badge - Professionals tab only */}
+                            {(mission.professionals_needed ?? 0) > 0 && workTab === 'professionals' && (
+                              mission.compensation_min ? (
+                                <span className="bg-blue-50 border border-blue-100 text-blue-700 
+                                                 text-xs font-semibold px-2 py-0.5 rounded-full">
+                                  💰 ₱{mission.compensation_min.toLocaleString()} – ₱{mission.compensation_max?.toLocaleString()}
+                                </span>
+                              ) : (
+                                <span className="bg-gray-50 border border-gray-100 text-gray-400 
+                                                 text-xs px-2 py-0.5 rounded-full">
+                                  💰 Negotiable
+                                </span>
+                              )
                             )}
                           </div>
                           {/* CTA — outline for owners, filled for others */}
@@ -534,24 +566,46 @@ export function MissionDashboard() {
         )}
 
         {workTab === "my_projects" && (
-          <MyProjectsView projects={myProjects} />
+          <MyProjectsView 
+            projects={myProjects} 
+            onDelete={(projectId) => setMyProjects(prev => prev.filter(p => p.id !== projectId))}
+          />
         )}
       </div>
     </div>
   );
 }
 
-function MyProjectsView({ projects }: { projects: Project[] }) {
+function MyProjectsView({ projects, onDelete }: { projects: Project[]; onDelete: (id: string) => void }) {
   const activeProjects = projects.filter(p => p.status === 'open' && p.type !== 'urgent');
   const urgentProjects = projects.filter(p => p.type === 'urgent');
-  const draftProjects = projects.filter(p => p.status === 'draft');
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  const handleDelete = async (projectId: string) => {
+    const confirmed = window.confirm(
+      'Are you sure you want to delete this project? This cannot be undone.'
+    );
+    if (!confirmed) return;
+
+    setDeleting(projectId);
+    try {
+      const success = await deleteProject(projectId);
+      if (success) {
+        onDelete(projectId);
+      } else {
+        alert('Failed to delete project.');
+      }
+    } catch (err) {
+      console.error('Error deleting project:', err);
+      alert('Failed to delete project.');
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   const getStatusBadge = (project: Project) => {
     if (project.type === 'urgent') {
       return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700 flex items-center gap-1"><AlertTriangle className="w-3 h-3" />Urgent</span>;
-    }
-    if (project.status === 'draft') {
-      return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Draft</span>;
     }
     return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">Active</span>;
   };
@@ -575,11 +629,10 @@ function MyProjectsView({ projects }: { projects: Project[] }) {
   return (
     <div>
       {/* Summary strip */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 gap-4 mb-6">
         {[
           { label: "Active Projects", value: activeProjects.length, color: "bg-green-50 text-green-700 border-green-100" },
           { label: "Urgent Projects", value: urgentProjects.length, color: "bg-red-50 text-red-700 border-red-100" },
-          { label: "Drafts", value: draftProjects.length, color: "bg-amber-50 text-amber-700 border-amber-100" },
         ].map(item => (
           <div key={item.label} className={`rounded-xl border p-4 text-center ${item.color}`}>
             <div className="text-3xl font-[Manrope] font-bold">{item.value}</div>
@@ -622,6 +675,14 @@ function MyProjectsView({ projects }: { projects: Project[] }) {
                 >
                   Edit
                 </Link>
+                <button
+                  onClick={() => handleDelete(project.id)}
+                  disabled={deleting === project.id}
+                  className="text-sm font-medium text-red-400 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 flex items-center gap-1"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  {deleting === project.id ? '...' : ''}
+                </button>
               </div>
             </div>
           </div>
