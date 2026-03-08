@@ -263,6 +263,7 @@ export function MissionDashboard() {
                 <Briefcase className="w-4 h-4" />
                 Professionals
               </button>
+              {user && (
               <button
                 onClick={() => setWorkTab('my_projects')}
                 className={`px-5 py-2 rounded-full text-sm font-medium transition flex items-center gap-2 ${
@@ -274,6 +275,7 @@ export function MissionDashboard() {
                 <Target className="w-4 h-4" />
                 My Projects
               </button>
+              )}
             </div>
             <Link
               to="/post-project"
