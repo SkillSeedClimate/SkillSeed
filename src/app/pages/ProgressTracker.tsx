@@ -86,8 +86,10 @@ export function ProgressTracker() {
         setProfile(profileData);
 
         // Fetch all data in parallel
+        // Note: fetchMissions needs user.id (auth UUID) not profileData.id (profile UUID)
+        // because connections.responder_id references auth.users(id)
         await Promise.all([
-          fetchMissions(profileData.id),
+          fetchMissions(user!.id),
           fetchChallenges(profileData.id),
           fetchBadges(profileData.id),
           fetchLeaderboardRank(profileData.id),
@@ -103,12 +105,13 @@ export function ProgressTracker() {
     fetchAllData();
   }, [user, authLoading]);
 
-  // Missions applied to
-  const fetchMissions = async (profileId: string) => {
+  // Missions applied to — uses auth user ID (user.id), NOT profile ID
+  // because connections.responder_id references auth.users(id)
+  const fetchMissions = async (authUserId: string) => {
     const { data, error } = await supabase
       .from("connections")
       .select("id, status, role, created_at, projects(title, location, duration, focus_area, status, type)")
-      .eq("responder_id", profileId)
+      .eq("responder_id", authUserId)
       .order("created_at", { ascending: false });
 
     if (error) {
