@@ -227,12 +227,14 @@ export async function completeChallenge(
 // ============================================================================
 
 /**
- * Fetch the global leaderboard
+ * Fetch the global leaderboard ordered by total points descending.
+ * Explicit ORDER BY is required — Supabase does not guarantee view ordering.
  */
 export async function fetchLeaderboard(limit: number = 10): Promise<LeaderboardEntry[]> {
   const { data, error } = await supabase
     .from('leaderboard')
     .select('*')
+    .order('total_points', { ascending: false })
     .limit(limit);
 
   if (error) {
@@ -249,7 +251,8 @@ export async function fetchLeaderboard(limit: number = 10): Promise<LeaderboardE
 export async function fetchUserRank(userId: string): Promise<number | null> {
   const { data, error } = await supabase
     .from('leaderboard')
-    .select('user_id');
+    .select('user_id')
+    .order('total_points', { ascending: false });
 
   if (error) {
     console.error('Error fetching user rank:', error);
@@ -258,6 +261,26 @@ export async function fetchUserRank(userId: string): Promise<number | null> {
 
   const index = data?.findIndex((entry) => entry.user_id === userId);
   return index !== undefined && index >= 0 ? index + 1 : null;
+}
+
+/**
+ * Subscribe to leaderboard changes in real time.
+ * Watches challenge_participants (points_earned updates) and profiles (name/avatar changes).
+ */
+export function subscribeToLeaderboard(callback: () => void) {
+  return supabase
+    .channel('leaderboard-realtime')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'challenge_participants' },
+      callback
+    )
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'profiles' },
+      callback
+    )
+    .subscribe();
 }
 
 /**
