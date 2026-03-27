@@ -412,15 +412,15 @@ export function MissionDashboard() {
             Based on your profile, <span className="text-white font-semibold">{sorted.length} projects match you right now.</span>
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
-            <div className="rounded-xl bg-white/10 border border-white/20 px-4 py-3">
+            <div className="rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
               <p className="text-xs text-[#A8D5BF]">Open missions</p>
               <p className="text-2xl font-bold text-white">{sorted.length}</p>
             </div>
-            <div className="rounded-xl bg-white/10 border border-white/20 px-4 py-3">
+            <div className="rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
               <p className="text-xs text-[#A8D5BF]">Urgent missions</p>
               <p className="text-2xl font-bold text-white">{urgent.length}</p>
             </div>
-            <div className="rounded-xl bg-white/10 border border-white/20 px-4 py-3">
+            <div className="rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
               <p className="text-xs text-[#A8D5BF]">Pending applications</p>
               <p className="text-2xl font-bold text-white">{pendingApplicationsTotal}</p>
             </div>
@@ -435,7 +435,7 @@ export function MissionDashboard() {
             <div className="flex gap-2">
               <button
                 onClick={() => setWorkTab('volunteers')}
-                className={`px-5 py-2 rounded-full text-sm font-medium transition flex items-center gap-2 ${
+                className={`px-5 min-h-10 py-2 rounded-full text-sm font-medium transition flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B]/50 ${
                   workTab === 'volunteers'
                     ? 'bg-[#1a3a2a] text-white'
                     : 'text-gray-600 hover:bg-gray-100'
@@ -446,7 +446,7 @@ export function MissionDashboard() {
               </button>
               <button
                 onClick={() => setWorkTab('professionals')}
-                className={`px-5 py-2 rounded-full text-sm font-medium transition flex items-center gap-2 ${
+                className={`px-5 min-h-10 py-2 rounded-full text-sm font-medium transition flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B]/50 ${
                   workTab === 'professionals'
                     ? 'bg-[#1a3a2a] text-white'
                     : 'text-gray-600 hover:bg-gray-100'
@@ -458,7 +458,7 @@ export function MissionDashboard() {
               {user && (
               <button
                 onClick={() => setWorkTab('my_projects')}
-                className={`px-5 py-2 rounded-full text-sm font-medium transition flex items-center gap-2 ${
+                className={`px-5 min-h-10 py-2 rounded-full text-sm font-medium transition flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B]/50 ${
                   workTab === 'my_projects'
                     ? 'bg-[#1a3a2a] text-white'
                     : 'text-gray-600 hover:bg-gray-100'
@@ -471,7 +471,7 @@ export function MissionDashboard() {
             </div>
             <Link
               to="/post-project"
-              className="bg-[#1a3a2a] text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-green-900 transition"
+              className="bg-[#1a3a2a] text-white px-4 min-h-10 py-2 rounded-full text-sm font-medium hover:bg-green-900 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B]/50"
             >
               + Post a Project
             </Link>
@@ -486,7 +486,7 @@ export function MissionDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Search & Filter Bar */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_6px_20px_rgba(15,61,46,0.08)] p-4 mb-6">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -495,19 +495,19 @@ export function MissionDashboard() {
                 placeholder="Search missions, organisations, skills..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30 focus:border-[#2F8F6B]"
+                className="w-full min-h-10 pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30 focus:border-[#2F8F6B]"
               />
             </div>
             <select
               value={selectedRegion}
               onChange={(e) => setSelectedRegion(e.target.value)}
-              className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30 bg-white"
+              className="px-3 min-h-10 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30 bg-white"
             >
               {regions.map(r => <option key={r}>{r}</option>)}
             </select>
             <button
               onClick={() => setUrgentOnly(!urgentOnly)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+              className={`flex items-center gap-2 px-4 min-h-10 py-2.5 rounded-xl text-sm font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B]/50 ${
                 urgentOnly
                   ? "bg-red-50 border-red-200 text-red-700"
                   : "border-gray-200 text-gray-600 hover:border-[#2F8F6B]"
@@ -519,7 +519,7 @@ export function MissionDashboard() {
             <select
               value={participantType}
               onChange={(e) => setParticipantType(e.target.value as "all" | "volunteer" | "student" | "professional")}
-              className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30 bg-white"
+              className="px-3 min-h-10 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30 bg-white"
               aria-label="Participant type filter"
             >
               <option value="all">All participants</option>
@@ -530,7 +530,7 @@ export function MissionDashboard() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as "best_match" | "urgent_first" | "most_needed" | "newest")}
-              className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30 bg-white"
+              className="px-3 min-h-10 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30 bg-white"
               aria-label="Sort missions"
             >
               <option value="best_match">Best Match</option>
@@ -541,13 +541,13 @@ export function MissionDashboard() {
             <div className="flex items-center gap-1 border border-gray-200 rounded-xl p-1">
               <button
                 onClick={() => setViewMode("grid")}
-                className={`p-2 rounded-lg transition-colors ${viewMode === "grid" ? "bg-[#E6F4EE] text-[#0F3D2E]" : "text-gray-400 hover:text-gray-600"}`}
+                className={`min-h-10 min-w-10 p-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B]/50 ${viewMode === "grid" ? "bg-[#E6F4EE] text-[#0F3D2E]" : "text-gray-400 hover:text-gray-600"}`}
               >
                 <Grid className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setViewMode("list")}
-                className={`p-2 rounded-lg transition-colors ${viewMode === "list" ? "bg-[#E6F4EE] text-[#0F3D2E]" : "text-gray-400 hover:text-gray-600"}`}
+                className={`min-h-10 min-w-10 p-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B]/50 ${viewMode === "list" ? "bg-[#E6F4EE] text-[#0F3D2E]" : "text-gray-400 hover:text-gray-600"}`}
               >
                 <List className="w-4 h-4" />
               </button>
@@ -606,13 +606,13 @@ export function MissionDashboard() {
           <>
             {/* Urgent banner */}
             {urgent.length > 0 && !urgentOnly && (
-              <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4 mb-6 flex items-start gap-3">
-                <span className="text-red-500 text-xl">⚠️</span>
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-6 flex items-start gap-3">
+                <span className="text-amber-500 text-xl">⚠️</span>
                 <div>
-                  <p className="text-red-600 font-semibold text-sm">
+                  <p className="text-amber-700 font-semibold text-sm">
                     {urgent.length} urgent mission{urgent.length > 1 ? 's' : ''} need immediate help
                   </p>
-                  <p className="text-red-400 text-xs mt-0.5">
+                  <p className="text-amber-700/70 text-xs mt-0.5">
                     These projects have critical deadlines — your skills are needed now.
                   </p>
                 </div>
@@ -631,7 +631,7 @@ export function MissionDashboard() {
                   return (
                     <div
                       key={mission.id}
-                      className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition group flex flex-col"
+                      className="bg-white rounded-2xl overflow-hidden shadow-[0_6px_20px_rgba(15,61,46,0.08)] border border-gray-100 hover:shadow-[0_14px_28px_rgba(15,61,46,0.12)] transition-all duration-200 group flex flex-col"
                     >
                       {/* Image — fixed shorter height */}
                       <div className="relative h-40 overflow-hidden">
@@ -790,7 +790,7 @@ export function MissionDashboard() {
                   return (
                     <div
                       key={mission.id}
-                      className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex overflow-hidden group"
+                      className="bg-white rounded-2xl border border-gray-100 shadow-[0_6px_20px_rgba(15,61,46,0.08)] hover:shadow-[0_14px_28px_rgba(15,61,46,0.12)] transition-all duration-200 flex overflow-hidden group"
                     >
                       <img src={getProjectImage(mission.focus_area)} alt={mission.title} className="w-36 h-full object-cover group-hover:scale-105 transition-transform duration-300 flex-shrink-0" />
                       <div className="p-4 flex-1 min-w-0">
