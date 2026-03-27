@@ -77,6 +77,7 @@ function getInitials(name: string | null): string {
 
 export function CommunityChallenges() {
   const { user } = useAuth();
+  const [isLoaded, setIsLoaded] = useState(false);
   
   // Data state
   const [challenges, setChallenges] = useState<Challenge[]>([]);
@@ -191,6 +192,11 @@ export function CommunityChallenges() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoaded(true), 60);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Real-time subscription
   useEffect(() => {
@@ -495,7 +501,7 @@ export function CommunityChallenges() {
           {/* Main challenges */}
           <div className="lg:col-span-2">
             {/* Weekly community goal */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_6px_20px_rgba(15,61,46,0.08)] p-5 mb-6">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_6px_20px_rgba(15,61,46,0.08)] p-5 mb-6 transition-all duration-300 ease-out motion-reduce:transition-none hover:shadow-[0_10px_24px_rgba(15,61,46,0.10)]">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Community goal (this week)</p>
@@ -513,7 +519,10 @@ export function CommunityChallenges() {
               </div>
               <div className="mt-4">
                 <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
-                  <div className="h-full bg-[#2F8F6B]" style={{ width: `${Math.round(weeklyProgress * 100)}%` }} />
+                  <div
+                    className="h-full bg-[#2F8F6B] transition-[width] duration-700 ease-out motion-reduce:transition-none"
+                    style={{ width: `${Math.round(weeklyProgress * 100)}%` }}
+                  />
                 </div>
                 <div className="flex items-center justify-between mt-2 text-xs text-gray-400">
                   <span>Progress</span>
@@ -539,7 +548,7 @@ export function CommunityChallenges() {
 
             {/* Search / filters / sort (hidden on feed) */}
             {activeTab !== "feed" && (
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_6px_20px_rgba(15,61,46,0.08)] p-4 mb-6">
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_6px_20px_rgba(15,61,46,0.08)] p-4 mb-6 transition-all duration-300 ease-out motion-reduce:transition-none hover:shadow-[0_10px_24px_rgba(15,61,46,0.10)]">
                 <div className="flex flex-col sm:flex-row gap-3">
                   <div className="flex-1">
                     <input
@@ -643,7 +652,7 @@ export function CommunityChallenges() {
             )}
 
             {activeTab !== "feed" && featured && (
-              <div className="bg-white rounded-2xl border border-[#2F8F6B]/30 shadow-[0_6px_20px_rgba(15,61,46,0.08)] overflow-hidden mb-6">
+              <div className="bg-white rounded-2xl border border-[#2F8F6B]/30 shadow-[0_6px_20px_rgba(15,61,46,0.08)] overflow-hidden mb-6 transition-all duration-300 ease-out motion-reduce:transition-none hover:shadow-[0_12px_26px_rgba(15,61,46,0.12)]">
                 <div className="bg-gradient-to-r from-[#2F8F6B] to-[#0F3D2E] px-4 py-2 flex items-center justify-between">
                   <span className="text-white text-xs font-bold uppercase tracking-wide">Featured this week</span>
                   <span className="text-[#D4F3E6] text-[11px]">Most completions + urgency score</span>
@@ -658,22 +667,24 @@ export function CommunityChallenges() {
                     </div>
                     <span className="text-sm font-bold text-[#2F8F6B]">+{featured.points_reward} pts</span>
                   </div>
-                  <div className="flex flex-wrap gap-3 mt-4 text-xs text-gray-500">
-                    <span className="inline-flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {featured.participant_count.toLocaleString()} joined</span>
-                    <span className="inline-flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {getDaysRemaining(featured.deadline)} days left</span>
-                    <span className="inline-flex items-center gap-1"><Flame className="w-3.5 h-3.5 text-amber-500" /> score {featured.activity_score}</span>
+                  <div className="flex flex-wrap gap-3 mt-4 text-sm text-gray-500">
+                    <span className="inline-flex items-center gap-1.5"><Users className="w-4 h-4" /> {featured.participant_count.toLocaleString()} joined</span>
+                    <span className="inline-flex items-center gap-1.5"><Clock className="w-4 h-4" /> {getDaysRemaining(featured.deadline)} days left</span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Flame className="w-4 h-4 text-amber-500" /> Score {featured.activity_score.toLocaleString()}
+                    </span>
                   </div>
                   <div className="flex gap-2 mt-4">
                     <button
                       onClick={() => handleJoin(featured.id)}
                       disabled={!user || joiningId === featured.id}
-                      className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#0F3D2E] text-white hover:bg-[#2F8F6B] transition-colors disabled:opacity-50"
+                      className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#0F3D2E] text-white hover:bg-[#2F8F6B] transition-all duration-300 delay-75 motion-reduce:transition-none hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
                     >
                       {joiningId === featured.id ? "Joining..." : joinedChallengeIds.has(featured.id) ? "Joined" : "Join in 1 tap"}
                     </button>
                     <button
                       onClick={() => setSelectedChallenge(featured)}
-                      className="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-200 text-gray-700 hover:border-[#2F8F6B]/50"
+                      className="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-200 text-gray-700 hover:border-[#2F8F6B]/50 transition-all duration-300 delay-75 motion-reduce:transition-none hover:scale-[1.01] active:scale-[0.99]"
                     >
                       View details
                     </button>
@@ -749,7 +760,7 @@ export function CommunityChallenges() {
               </div>
             ) : (
               <div className="space-y-5">
-                {filteredChallenges.map((challenge) => {
+                {filteredChallenges.map((challenge, index) => {
                   const challengeStatus = getChallengeStatus(challenge.id);
                   const isJoined = challengeStatus !== "not-joined";
                   const isCompleted = challengeStatus === "completed";
@@ -760,9 +771,10 @@ export function CommunityChallenges() {
                   return (
                     <div
                       key={challenge.id}
-                      className={`bg-white rounded-2xl border shadow-[0_6px_20px_rgba(15,61,46,0.08)] overflow-hidden transition-all duration-200 hover:shadow-[0_14px_28px_rgba(15,61,46,0.12)] ${
+                      className={`bg-white rounded-2xl border shadow-[0_6px_20px_rgba(15,61,46,0.08)] overflow-hidden transition-all duration-300 ease-out motion-reduce:transition-none hover:shadow-[0_14px_28px_rgba(15,61,46,0.12)] hover:-translate-y-0.5 ${
                         challengeIsFeatured ? "border-[#2F8F6B]/30" : "border-gray-100"
-                      }`}
+                      } ${isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1.5"}`}
+                      style={{ transitionDelay: `${Math.min(220, (index % 6) * 40)}ms` }}
                     >
                       {challengeIsFeatured && (
                         <div className="bg-gradient-to-r from-[#2F8F6B] to-[#0F3D2E] px-4 py-1.5 flex items-center justify-between gap-2">
@@ -773,8 +785,8 @@ export function CommunityChallenges() {
                             </span>
                           </div>
                           {!challenge.is_pinned && featuredChallenge && (
-                            <span className="text-[#A8D5BF] text-[10px] font-medium">
-                              Score: {featuredChallenge.activity_score}
+                            <span className="text-[#A8D5BF] text-xs font-medium">
+                              Score {featuredChallenge.activity_score.toLocaleString()}
                             </span>
                           )}
                         </div>
@@ -826,13 +838,13 @@ export function CommunityChallenges() {
                             </div>
                           </div>
                           <p className="text-sm text-gray-500 leading-relaxed mb-3">{challenge.description}</p>
-                          <div className="flex items-center gap-4 text-xs text-gray-500 mb-4">
-                            <span className="flex items-center gap-1">
-                              <Users className="w-3.5 h-3.5" />
+                          <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+                            <span className="flex items-center gap-1.5">
+                              <Users className="w-4 h-4" />
                               {challenge.participant_count.toLocaleString()} participants
                             </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-3.5 h-3.5" />
+                            <span className="flex items-center gap-1.5">
+                              <Clock className="w-4 h-4" />
                               {daysLeft} days remaining
                             </span>
                           </div>
@@ -846,7 +858,7 @@ export function CommunityChallenges() {
                                 <button
                                   onClick={() => handleOpenSubmissionModal(challenge)}
                                   disabled={!user}
-                                  className="flex-1 py-2 rounded-xl text-sm font-semibold bg-[#f5a623] text-[#1a3a2a] hover:bg-[#d4891f] transition-colors disabled:opacity-50"
+                                  className="flex-1 py-2 rounded-xl text-sm font-semibold bg-[#f5a623] text-[#1a3a2a] hover:bg-[#d4891f] transition-all duration-300 delay-75 motion-reduce:transition-none hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
                                 >
                                   <span className="flex items-center justify-center gap-1.5">
                                     <Camera className="w-4 h-4" /> Continue
@@ -855,7 +867,7 @@ export function CommunityChallenges() {
                                 <button
                                   onClick={() => handleJoin(challenge.id)}
                                   disabled={!user || joiningId === challenge.id}
-                                  className="px-3 py-2 rounded-xl border border-gray-200 text-gray-500 hover:border-red-300 hover:text-red-500 transition-colors text-sm"
+                                  className="px-3 py-2 rounded-xl border border-gray-200 text-gray-500 hover:border-red-300 hover:text-red-500 transition-all duration-300 delay-75 motion-reduce:transition-none hover:scale-[1.01] active:scale-[0.99] text-sm"
                                 >
                                   {joiningId === challenge.id ? (
                                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -868,7 +880,7 @@ export function CommunityChallenges() {
                               <button
                                 onClick={() => handleJoin(challenge.id)}
                                 disabled={!user || joiningId === challenge.id}
-                                className="flex-1 py-2 rounded-xl text-sm font-semibold bg-[#0F3D2E] text-white hover:bg-[#2F8F6B] transition-colors disabled:opacity-50"
+                                className="flex-1 py-2 rounded-xl text-sm font-semibold bg-[#0F3D2E] text-white hover:bg-[#2F8F6B] transition-all duration-300 delay-75 motion-reduce:transition-none hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
                               >
                                 {joiningId === challenge.id ? (
                                   <span className="flex items-center justify-center gap-1.5">
@@ -906,7 +918,7 @@ export function CommunityChallenges() {
           <div className="space-y-5">
 
             {/* Leaderboard */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 transition-all duration-300 ease-out motion-reduce:transition-none hover:shadow-[0_10px_24px_rgba(15,61,46,0.10)]">
               <div className="flex items-center gap-2 mb-4">
                 <Trophy className="w-5 h-5 text-amber-500" />
                 <div className="flex-1 min-w-0">
@@ -926,7 +938,7 @@ export function CommunityChallenges() {
                     return (
                       <div
                         key={entry.user_id}
-                        className={`flex items-center gap-3 p-2 rounded-xl transition-colors ${
+                        className={`flex items-center gap-3 p-2 rounded-xl transition-all duration-200 ease-out motion-reduce:transition-none ${
                           isYou ? "bg-[#E6F4EE] border border-[#2F8F6B]/20" : "hover:bg-gray-50"
                         }`}
                       >
@@ -975,7 +987,7 @@ export function CommunityChallenges() {
 
             {/* My challenge summary */}
             {user && (
-              <div className="bg-[#0F3D2E] rounded-2xl p-5 text-white">
+              <div className="bg-[#0F3D2E] rounded-2xl p-5 text-white transition-all duration-300 ease-out motion-reduce:transition-none hover:shadow-[0_10px_24px_rgba(15,61,46,0.20)]">
                 <div className="flex items-center gap-2 mb-4">
                   <Award className="w-5 h-5 text-[#6DD4A8]" />
                   <span className="font-semibold">My Challenge Stats</span>
@@ -1010,7 +1022,7 @@ export function CommunityChallenges() {
             )}
 
             {/* Trending skills */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 transition-all duration-300 ease-out motion-reduce:transition-none hover:shadow-[0_10px_24px_rgba(15,61,46,0.10)]">
               <div className="flex items-center gap-2 mb-4">
                 <TrendingUp className="w-5 h-5 text-[#2F8F6B]" />
                 <h3 className="font-[Manrope] font-bold text-[#0F3D2E]">Trending Skills</h3>
@@ -1048,12 +1060,12 @@ export function CommunityChallenges() {
       {selectedChallenge && (
         <div className="fixed inset-0 z-50">
           <div
-            className="absolute inset-0 bg-black/30"
+            className="absolute inset-0 bg-black/30 transition-opacity duration-200 ease-out motion-reduce:transition-none"
             onClick={() => setSelectedChallenge(null)}
             role="button"
             aria-label="Close challenge details"
           />
-          <div className="absolute right-0 top-0 h-full w-full sm:w-[460px] bg-white shadow-2xl border-l border-gray-100 overflow-y-auto">
+          <div className="absolute right-0 top-0 h-full w-full sm:w-[460px] bg-white shadow-2xl border-l border-gray-100 overflow-y-auto transition-transform duration-200 ease-out motion-reduce:transition-none">
             <div className="p-5 border-b border-gray-100">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
