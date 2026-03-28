@@ -238,9 +238,6 @@ export function LandingPage() {
               </div>
             ))}
           </div>
-          <p className="text-center text-xs mt-4 mb-0 max-w-md mx-auto text-[#9CA3AF] dark:text-emerald-200/65">
-            Community figures updated monthly, same basis as stats below.
-          </p>
         </div>
 
         {/* Mission & Vision cards */}
@@ -275,8 +272,6 @@ export function LandingPage() {
               </p>
             </div>
           </div>
-          {/* ground fade */}
-          <div className="h-12 w-full" style={{ background: "linear-gradient(to bottom, transparent, #F0F9F5)" }} />
         </div>
       </section>
 
