@@ -54,9 +54,9 @@ function AnimatedStat({ value, suffix, label, desc, recencyLabel = "Updated mont
         {count.toLocaleString()}{suffix}
       </div>
       <div className="text-sm" style={{ color: "rgba(255,255,255,0.9)", fontWeight: 600 }}>{label}</div>
-      {desc && <div className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.5)" }}>{desc}</div>}
+      {desc && <div className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.68)" }}>{desc}</div>}
       {recencyLabel && (
-        <div className="text-[10px] mt-2 leading-tight" style={{ color: "rgba(255,255,255,0.4)" }}>{recencyLabel}</div>
+        <div className="text-[10px] mt-2 leading-tight" style={{ color: "rgba(255,255,255,0.55)" }}>{recencyLabel}</div>
       )}
     </div>
   );
@@ -69,6 +69,19 @@ function getQuestColor(quest: Quest): string {
   if (quest.category?.toLowerCase().includes("nature") || quest.category?.toLowerCase().includes("tree") || quest.category?.toLowerCase().includes("forest")) return "#059669";
   if (quest.tier === "advanced") return "#3B82F6";
   return "#2F8F6B";
+}
+
+/** Visual variety when API returns the same badge for every quest */
+function getQuestDisplayIcon(quest: Quest): string {
+  if (quest.badge_icon && quest.badge_icon !== "🏆") return quest.badge_icon;
+  const c = quest.category?.toLowerCase() ?? "";
+  if (c.includes("community") || c.includes("barangay")) return "🤝";
+  if (c.includes("circular") || c.includes("repair")) return "🔧";
+  if (c.includes("waste") || c.includes("compost") || c.includes("zero")) return "♻️";
+  if (c.includes("energy")) return "⚡";
+  if (c.includes("water")) return "💧";
+  if (c.includes("tree") || c.includes("forest")) return "🌳";
+  return quest.badge_icon || "🌿";
 }
 
 const testimonials = [
@@ -196,7 +209,7 @@ export function LandingPage() {
             <span className="text-[#2F8F6B] dark:text-[#BEEBD7]">finds its people.</span>
           </h1>
 
-          <p className="mb-8 mx-auto text-lg" style={{ color: "#6B7280", lineHeight: 1.7, maxWidth: "580px" }}>
+          <p className="mb-8 mx-auto text-lg text-[#4b5563] dark:!text-emerald-200/88" style={{ lineHeight: 1.7, maxWidth: "580px" }}>
             SkillSeed connects learners, skilled volunteers, and organizations to short, real-world climate missions. Learn by doing. Track your impact. Join the movement.
           </p>
 
@@ -217,7 +230,7 @@ export function LandingPage() {
           </div>
 
           {/* Social proof */}
-          <div className="flex flex-wrap items-center justify-center gap-6 mb-16">
+          <div className="flex flex-wrap items-center justify-center gap-6 mb-6">
             <div className="flex items-center gap-2">
               <div className="flex -space-x-2">
                 {["MS", "JR", "LC", "AB", "DK"].map((i, idx) => (
@@ -241,7 +254,7 @@ export function LandingPage() {
         </div>
 
         {/* Mission & Vision cards */}
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 md:mt-16">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="rounded-2xl p-8 text-left bg-[#F0FDF6] border border-[#BBF7D0] dark:border-emerald-400/30 dark:!bg-[#10271f] ring-2 ring-[#2F8F6B]/25 dark:ring-emerald-400/25 shadow-sm dark:shadow-none" style={{ background: "#F0FDF6" }}>
               <div className="flex items-center gap-2.5 mb-4">
@@ -253,7 +266,7 @@ export function LandingPage() {
               <h3 className="mb-3 text-[#0F3D2E] dark:text-emerald-50" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "1.15rem", lineHeight: 1.4 }}>
                 Connect. Build capacity. Deploy the people the climate crisis needs.
               </h3>
-              <p style={{ color: "#4B5563", lineHeight: 1.9, fontSize: "0.9rem" }}>
+              <p className="text-[#374151] dark:!text-emerald-200/80" style={{ lineHeight: 1.9, fontSize: "0.9rem" }}>
                 Starting in the Philippines, where the need is greatest, and growing into a global network. Rooted in community, driven by people, and open to every nation ready to act.
               </p>
             </div>
@@ -267,7 +280,7 @@ export function LandingPage() {
               <h3 className="mb-3 text-[#1E3A5F] dark:text-sky-100" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "1.15rem", lineHeight: 1.4 }}>
                 A world where no climate crisis goes unanswered.
               </h3>
-              <p style={{ color: "#4B5563", lineHeight: 1.9, fontSize: "0.9rem" }}>
+              <p className="text-[#374151] dark:!text-emerald-200/80" style={{ lineHeight: 1.9, fontSize: "0.9rem" }}>
                 Because the people and skills to respond already exist in every community. The Philippines leads the way: the nation that faces the most, teaches the most. From its shores, Skill Seed grows outward — because every climate issue has a human-driven solution.
               </p>
             </div>
@@ -276,7 +289,7 @@ export function LandingPage() {
       </section>
 
       {/* ════════════════ HOW IT WORKS ════════════════ */}
-      <section className="pt-20 pb-20 md:pt-24 md:pb-24 dark:!bg-[#10271f]" style={{ background: "#F0F9F5" }}>
+      <section className="pt-16 pb-24 md:pt-20 md:pb-32 dark:!bg-[#10271f]" style={{ background: "#F0F9F5" }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
             <span className="inline-block px-3 py-1 rounded-full text-xs mb-3"
@@ -286,7 +299,7 @@ export function LandingPage() {
             <h2 className="mb-3 text-[#0F3D2E] dark:text-emerald-50" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "clamp(1.8rem, 3vw, 2.5rem)" }}>
               Simple. Mission-Driven. Impactful.
             </h2>
-            <p style={{ color: "#6B7280", maxWidth: "480px", margin: "0 auto" }}>
+            <p className="max-w-md mx-auto text-[#4b5563] dark:!text-emerald-200/85" style={{ lineHeight: 1.7 }}>
               From skill building to real-world action — SkillSeed makes climate participation accessible to everyone.
             </p>
           </div>
@@ -305,7 +318,7 @@ export function LandingPage() {
                     style={{ background: color, fontWeight: 800 }}>{step.slice(1)}</span>
                 </div>
                 <h3 className="mb-3 text-[#0F3D2E] dark:text-emerald-50" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 700 }}>{title}</h3>
-                <p className="text-sm" style={{ color: "#6B7280", lineHeight: 1.7 }}>{desc}</p>
+                <p className="text-sm text-[#4b5563] dark:!text-emerald-200/82" style={{ lineHeight: 1.7 }}>{desc}</p>
               </div>
             ))}
           </div>
@@ -320,7 +333,7 @@ export function LandingPage() {
             <AnimatedStat value={1240} suffix="+" label="Missions Completed" desc="verified impact" />
             <AnimatedStat value={87} suffix="" label="Countries Reached" desc="and growing" />
           </div>
-          <p className="text-center text-xs mt-10 max-w-md mx-auto px-4" style={{ color: "rgba(255,255,255,0.5)", lineHeight: 1.5 }}>
+          <p className="text-center text-xs mt-10 max-w-md mx-auto px-4" style={{ color: "rgba(255,255,255,0.62)", lineHeight: 1.5 }}>
             Figures updated monthly. Totals reflect activity across the platform.
           </p>
         </div>
@@ -337,7 +350,7 @@ export function LandingPage() {
             <h2 className="mb-3 text-[#0F3D2E] dark:text-emerald-50" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "clamp(1.8rem, 3vw, 2.5rem)" }}>
               However you show up, you belong here
             </h2>
-            <p style={{ color: "#6B7280", maxWidth: "480px", margin: "0 auto" }}>
+            <p className="max-w-md mx-auto text-[#4b5563] dark:!text-emerald-200/88" style={{ lineHeight: 1.7 }}>
               SkillSeed is built for every kind of climate participant — from curious beginners to seasoned professionals to leading organizations.
             </p>
           </div>
@@ -346,10 +359,10 @@ export function LandingPage() {
             {roles.map(({ id, icon: Icon, title, subtitle, desc, cta, bg, border, iconBg, iconColor, emphasis }) => (
               <div
                 key={id}
-                className={`rounded-2xl p-8 flex flex-col group transition-all duration-300 cursor-pointer ${
+                className={`rounded-2xl p-8 pb-10 flex flex-col group transition-all duration-300 cursor-pointer ${
                   emphasis
                     ? "md:scale-[1.03] md:z-[1] md:shadow-xl md:shadow-black/15 dark:md:shadow-black/40 ring-2 ring-[#2F8F6B]/45 dark:ring-emerald-400/40"
-                    : "dark:!bg-[#132b23]"
+                    : "dark:!bg-[#152a24] dark:!border-emerald-400/22"
                 }`}
                 style={{ background: bg, border: `1.5px solid ${border}` }}
                 onClick={() => handleRoleClick(id)}
@@ -366,7 +379,9 @@ export function LandingPage() {
                   </span>
                 )}
                 <span
-                  className="text-xs mb-2 px-2 py-0.5 rounded-full w-fit"
+                  className={`text-xs mb-2 px-2 py-0.5 rounded-full w-fit font-semibold ${
+                    emphasis ? "" : "dark:!bg-white/12 dark:!text-emerald-200"
+                  }`}
                   style={{
                     background: emphasis ? "rgba(255,255,255,0.15)" : "#E6F4EE",
                     color: emphasis ? "rgba(255,255,255,0.9)" : "#2F8F6B",
@@ -386,12 +401,12 @@ export function LandingPage() {
                   {title}
                 </h3>
                 <p
-                  className="text-sm mb-6 flex-1"
-                  style={{ color: emphasis ? "rgba(255,255,255,0.78)" : "#6B7280", lineHeight: 1.7 }}>
+                  className={`text-sm mb-6 flex-1 ${emphasis ? "text-white/85" : "text-[#4b5563] dark:!text-emerald-200/85"}`}
+                  style={{ lineHeight: 1.7 }}>
                   {desc}
                 </p>
                 <span
-                  className={`inline-flex items-center gap-2 text-sm ${
+                  className={`mt-auto pt-2 inline-flex items-center gap-2 text-sm ${
                     emphasis
                       ? "text-white"
                       : id === "jobready"
@@ -408,9 +423,9 @@ export function LandingPage() {
       </section>
 
       {/* ════════════════ FEATURED QUESTS ════════════════ */}
-      <section className="py-20 dark:!bg-[#10271f]" style={{ background: "#F9FAFB" }}>
+      <section className="pt-14 pb-20 md:pt-16 dark:!bg-[#10271f]" style={{ background: "#F9FAFB" }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-end justify-between mb-10">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
             <div>
               <span className="inline-block px-3 py-1 rounded-full text-xs mb-3"
                 style={{ background: "#E6F4EE", color: "#2F8F6B", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>
@@ -436,13 +451,13 @@ export function LandingPage() {
               {displayQuests.map((quest) => {
                 const color = getQuestColor(quest);
                 return (
-                  <Link key={quest.id} to={`/quests/${quest.id}`} className="group rounded-2xl overflow-hidden block transition-all duration-300 border border-gray-200 dark:border-emerald-400/35 bg-white"
+                  <Link key={quest.id} to={`/quests/${quest.id}`} className="group flex flex-col h-full rounded-2xl overflow-hidden transition-all duration-300 border border-gray-200 dark:border-emerald-400/35 bg-white"
                     style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
                     onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 8px 28px rgba(15,61,46,0.12)"; e.currentTarget.style.transform = "translateY(-3px)"; }}
                     onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.04)"; e.currentTarget.style.transform = "none"; }}>
-                    <div className="relative h-44 overflow-hidden flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${color}15, ${color}35)` }}>
+                    <div className="relative h-44 shrink-0 overflow-hidden flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${color}15, ${color}35)` }}>
                       <div className="pointer-events-none absolute inset-0 bg-transparent dark:bg-[#061510]/45 dark:mix-blend-multiply" aria-hidden />
-                      <span className="relative z-[1] text-6xl transition-transform duration-500 group-hover:scale-110">{quest.badge_icon || "🌿"}</span>
+                      <span className="relative z-[1] text-6xl transition-transform duration-500 group-hover:scale-110">{getQuestDisplayIcon(quest)}</span>
                       <span className="absolute top-3 left-3 z-[2] px-2.5 py-1 rounded-full text-xs"
                         style={{ background: "rgba(255,255,255,0.92)", color: color, fontWeight: 700 }}>
                         {quest.category || quest.tier}
@@ -452,10 +467,10 @@ export function LandingPage() {
                         {quest.tier === "beginner" ? "Beginner" : "Advanced"}
                       </span>
                     </div>
-                    <div className="p-4">
+                    <div className="px-5 pt-4 pb-6 flex flex-col flex-1 min-h-0">
                       <p className="text-xs mb-1 text-[#9CA3AF] dark:text-emerald-200/75">{quest.tier === "beginner" ? "🌱 Badge Quest" : "🏆 Certificate Quest"}</p>
-                      <h3 className="mb-3 text-[#0F3D2E] dark:text-emerald-50" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 700, fontSize: "0.95rem" }}>{quest.title}</h3>
-                      <div className="flex items-center justify-between pt-3" style={{ borderTop: "1px solid #F3F4F6" }}>
+                      <h3 className="mb-4 text-[#0F3D2E] dark:text-emerald-50" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 700, fontSize: "0.95rem" }}>{quest.title}</h3>
+                      <div className="flex items-center justify-between pt-4 mt-auto border-t border-[#F3F4F6] dark:border-white/10">
                         <span className="text-xs flex items-center gap-1 text-[#9CA3AF] dark:text-emerald-200/70">
                           <Clock className="w-3 h-3" /> ~{quest.estimated_days} days
                         </span>
@@ -485,9 +500,9 @@ export function LandingPage() {
       </section>
 
       {/* ════════════════ TESTIMONIALS ════════════════ */}
-      <section className="py-20 dark:!bg-[#10271f]" style={{ background: "white" }}>
+      <section className="pt-20 pb-24 md:pb-28 dark:!bg-[#10271f]" style={{ background: "white" }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
+          <div className="text-center mb-12 md:mb-14">
             <span className="inline-block px-3 py-1 rounded-full text-xs mb-3"
               style={{ background: "#E6F4EE", color: "#2F8F6B", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>
               Community Stories
@@ -504,7 +519,7 @@ export function LandingPage() {
                     <Star key={i} className="w-4 h-4" style={{ fill: "#FBBF24", color: "#FBBF24" }} />
                   ))}
                 </div>
-                <p className="text-sm mb-6 flex-1" style={{ color: "#374151", lineHeight: 1.8 }}>"{t.text}"</p>
+                <p className="text-sm mb-6 flex-1 text-[#374151] dark:!text-emerald-100/90" style={{ lineHeight: 1.8 }}>"{t.text}"</p>
                 <div className="flex items-center gap-3 pt-5" style={{ borderTop: "1px solid #E5E7EB" }}>
                   <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm text-white"
                     style={{ background: "linear-gradient(135deg, #0F3D2E, #2F8F6B)", fontWeight: 700 }}>
@@ -522,7 +537,7 @@ export function LandingPage() {
       </section>
 
       {/* ════════════════ FINAL CTA ════════════════ */}
-      <section className="py-20 relative overflow-hidden" style={{ background: "#0F3D2E" }}>
+      <section className="py-24 md:py-28 relative overflow-hidden" style={{ background: "#0F3D2E" }}>
         <div
           className="absolute inset-0 opacity-10 dark:opacity-[0.28] dark:mix-blend-multiply dark:saturate-75 dark:brightness-90"
           style={{ backgroundImage: `url(${IMG_COMMUNITY})`, backgroundSize: "cover", backgroundPosition: "center" }}
@@ -545,12 +560,12 @@ export function LandingPage() {
           </p>
           <div className="flex flex-wrap gap-3 justify-center">
             <Link to="/auth"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm text-white transition-all border-2 border-white/55 bg-transparent hover:bg-white/10"
-              style={{ fontWeight: 700, fontFamily: "'Manrope', sans-serif" }}>
+              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl text-sm font-bold transition-all bg-white text-[#0F3D2E] hover:bg-emerald-50 shadow-lg shadow-black/20"
+              style={{ fontFamily: "'Manrope', sans-serif" }}>
               <Sprout className="w-4 h-4" /> Join for Free
             </Link>
             <Link to="/hands-on"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm text-white/90 transition-all border border-white/30 bg-white/5 hover:bg-white/12"
+              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl text-sm text-white transition-all border-2 border-white/45 bg-transparent hover:bg-white/10"
               style={{ fontWeight: 600 }}>
               Browse Quests <ArrowRight className="w-4 h-4" />
             </Link>
