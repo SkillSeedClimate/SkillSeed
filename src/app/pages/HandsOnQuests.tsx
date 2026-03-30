@@ -429,19 +429,6 @@ export function HandsOnQuests() {
           </div>
         )}
       </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {myQuestsWithProgress.map(({ quest, progress }) => (
-              <QuestCard
-                key={quest.id}
-                quest={quest}
-                progress={progress}
-                onStart={handleStartQuest}
-              />
-            ))}
-          </div>
-        )}
-      </div>
 
       {/* Sign-in prompt for guests */}
       {!user && (
