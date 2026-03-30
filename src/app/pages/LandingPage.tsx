@@ -129,7 +129,7 @@ function getQuestColor(quest: Quest): string {
 function getQuestDisplayIcon(quest: Quest): string {
   if (quest.badge_icon && quest.badge_icon !== "🏆") return quest.badge_icon;
   const c = quest.category?.toLowerCase() ?? "";
-  if (c.includes("community") || c.includes("barangay")) return "🤝";
+  if (c.includes("community") || c.includes("barangay")) return "��";
   if (c.includes("circular") || c.includes("repair")) return "🔧";
   if (c.includes("waste") || c.includes("compost") || c.includes("zero")) return "♻️";
   if (c.includes("energy")) return "⚡";
@@ -302,13 +302,9 @@ export function LandingPage() {
     <div className="overflow-x-hidden">
 
       {/* ════════════════ HERO ════════════════ */}
-      <section className="relative pt-16 pb-16 md:pb-20 lg:pb-24 overflow-hidden dark:!bg-[#0c1815]" style={{ background: "white" }}>
-        <div
-          className="pointer-events-none absolute inset-0 opacity-0 dark:opacity-[0.22] dark:mix-blend-multiply dark:saturate-75"
-          style={{ backgroundImage: `url(${IMG_COMMUNITY})`, backgroundSize: "cover", backgroundPosition: "center top" }}
-        />
+      <section className="relative pt-20 pb-16 md:pb-20 lg:pb-24 overflow-hidden bg-background dark:bg-[#0D1F18]">
         {/* subtle dot pattern */}
-        <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.04]" style={{ backgroundImage: "radial-gradient(#0F3D2E 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
+        <div className="absolute inset-0 opacity-[0.025] dark:opacity-[0.04]" style={{ backgroundImage: "radial-gradient(#0F3D2E 1px, transparent 1px)", backgroundSize: "28px 28px" }} aria-hidden="true" />
         <HeroAmbience reduced={reduceMotion} />
         <FloatingSeeds reduced={reduceMotion} />
 
@@ -317,37 +313,37 @@ export function LandingPage() {
           initial="hidden"
           animate="show"
           variants={staggerWrap}>
-          <motion.p variants={heroItem} className="text-[10px] sm:text-xs uppercase tracking-[0.18em] text-[#2F8F6B]/85 dark:text-emerald-300/75 mb-3 font-semibold">
+          <motion.p variants={heroItem} className="text-xs uppercase tracking-[0.16em] text-[#2F8F6B] dark:text-[#6DD4A8] mb-4 font-bold">
             Mission-based climate learning
           </motion.p>
           <motion.h1
             variants={heroItem}
-            className="mb-5 text-[#0F3D2E] dark:text-[#B7C96A]"
-            style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "clamp(2.4rem, 5.5vw, 4rem)", lineHeight: 1.1, letterSpacing: "-0.02em" }}>
-            Where climate action<br />
-            <span className="text-[#2F8F6B] dark:text-[#BEEBD7]">finds its people.</span>
+            className="mb-6 text-[#0F3D2E] dark:text-[#BEEBD7] text-balance"
+            style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "clamp(2.25rem, 5vw, 3.5rem)", lineHeight: 1.12, letterSpacing: "-0.025em" }}>
+            Where climate action<br className="hidden sm:block" />
+            <span className="text-[#2F8F6B] dark:text-[#6DD4A8]">finds its people.</span>
           </motion.h1>
 
           <motion.p
             variants={heroItem}
-            className="mb-8 mx-auto text-lg text-[#4b5563] dark:!text-emerald-200/88"
-            style={{ lineHeight: 1.7, maxWidth: "580px" }}>
-            SkillSeed connects learners, skilled volunteers, and organizations to short, real-world climate missions. Learn by doing. Track your impact. Join the movement.
+            className="mb-10 mx-auto text-base sm:text-lg text-muted-foreground dark:text-[#94C8AF] text-pretty"
+            style={{ lineHeight: 1.7, maxWidth: "540px" }}>
+            SkillSeed connects learners, skilled volunteers, and organizations to short, real-world climate missions. Learn by doing. Track your impact.
           </motion.p>
 
-          <motion.div variants={heroItem} className="flex flex-wrap gap-3 justify-center mb-10">
+          <motion.div variants={heroItem} className="flex flex-col sm:flex-row gap-3 justify-center mb-12">
             <motion.button
               type="button"
               onClick={handleJoinProject}
-              whileHover={reduceMotion ? undefined : { scale: 1.02, y: -2 }}
+              whileHover={reduceMotion ? undefined : { y: -2 }}
               whileTap={reduceMotion ? undefined : { scale: 0.98 }}
-              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl text-white transition-shadow duration-200 cursor-pointer"
-              style={{ background: "linear-gradient(135deg, #0F3D2E 0%, #2F8F6B 100%)", fontWeight: 700, fontFamily: "'Manrope', sans-serif", boxShadow: "0 4px 20px rgba(47,143,107,0.4)", border: "none" }}>
+              className="inline-flex items-center justify-center gap-2.5 min-h-[52px] px-8 rounded-xl text-white transition-all duration-200 cursor-pointer shadow-lg shadow-[#2F8F6B]/30 hover:shadow-xl hover:shadow-[#2F8F6B]/40 active:scale-[0.98]"
+              style={{ background: "linear-gradient(135deg, #0F3D2E 0%, #2F8F6B 100%)", fontWeight: 700, fontFamily: "'Manrope', sans-serif" }}>
               <Users className="w-4 h-4" /> Join a Project
             </motion.button>
-            <motion.div whileHover={reduceMotion ? undefined : { y: -2 }} className="inline-flex">
+            <motion.div whileHover={reduceMotion ? undefined : { y: -2 }} className="inline-flex justify-center">
               <Link to="/hands-on"
-                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl transition-colors duration-200 bg-white dark:!bg-transparent border-2 border-[#0F3D2E] dark:border-emerald-400/55 text-[#0F3D2E] dark:text-emerald-50 hover:bg-[#F0FDF6] dark:hover:!bg-white/10"
+                className="inline-flex items-center justify-center gap-2.5 min-h-[52px] px-8 rounded-xl transition-all duration-200 bg-white dark:bg-transparent border-2 border-[#0F3D2E] dark:border-[#6DD4A8]/60 text-[#0F3D2E] dark:text-[#BEEBD7] hover:bg-[#E6F4EE] dark:hover:bg-white/10 active:scale-[0.98]"
                 style={{ fontWeight: 700, fontFamily: "'Manrope', sans-serif" }}>
                 <Sprout className="w-4 h-4" /> Learn New Skills
               </Link>
@@ -355,13 +351,13 @@ export function LandingPage() {
           </motion.div>
 
           {/* Social proof */}
-          <motion.div variants={heroItem} className="flex flex-wrap items-center justify-center gap-6 mb-6">
-            <div className="flex items-center gap-2">
+          <motion.div variants={heroItem} className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
+            <div className="flex items-center gap-2.5">
               <div className="flex -space-x-2">
                 {["MS", "JR", "LC", "AB", "DK"].map((i, idx) => (
                   <motion.div
                     key={idx}
-                    className="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-xs text-white"
+                    className="w-8 h-8 rounded-full border-2 border-white dark:border-[#0D1F18] flex items-center justify-center text-xs text-white"
                     style={{ background: ["#2F8F6B", "#059669", "#1EB89A", "#0F3D2E", "#34D399"][idx], fontWeight: 700 }}
                     initial={reduceMotion ? false : { opacity: 0, scale: 0.5 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -374,7 +370,7 @@ export function LandingPage() {
                   </motion.div>
                 ))}
               </div>
-              <span className="text-sm" style={{ color: "#6B7280" }}><strong style={{ color: "#0F3D2E" }}>12,840+</strong> members</span>
+              <span className="text-sm text-muted-foreground"><strong className="text-[#0F3D2E] dark:text-[#BEEBD7]">12,840+</strong> members</span>
             </div>
             {[
               { icon: Globe, label: "87 countries" },
@@ -382,58 +378,56 @@ export function LandingPage() {
               { icon: Leaf, label: "Free to join" },
             ].map(({ icon: Icon, label }) => (
               <div key={label} className="flex items-center gap-1.5">
-                <Icon className="w-4 h-4" style={{ color: "#2F8F6B" }} />
-                <span className="text-sm" style={{ color: "#6B7280", fontWeight: 500 }}>{label}</span>
+                <Icon className="w-4 h-4 text-[#2F8F6B] dark:text-[#6DD4A8]" />
+                <span className="text-sm text-muted-foreground font-medium">{label}</span>
               </div>
             ))}
           </motion.div>
         </motion.div>
 
         {/* Mission & Vision cards */}
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 md:mt-16">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-16 md:mt-20">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <motion.div
-              className="rounded-2xl p-8 text-left bg-[#F0FDF6] border border-[#BBF7D0] dark:border-emerald-400/30 dark:!bg-[#10271f] ring-2 ring-[#2F8F6B]/25 dark:ring-emerald-400/25 shadow-sm dark:shadow-none"
-              style={{ background: "#F0FDF6" }}
+              className="rounded-2xl p-7 sm:p-8 text-left bg-[#E6F4EE] dark:bg-[#132B23] border border-[#2F8F6B]/20 dark:border-[#6DD4A8]/20"
               variants={scrollFade}
               initial="hidden"
               whileInView="show"
               viewport={LANDING_VIEWPORT}
               transition={{ delay: reduceMotion ? 0 : 0.05 }}
               whileHover={reduceMotion ? undefined : { y: -4, transition: { duration: 0.22 } }}>
-              <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "#E6F4EE" }}>
-                  <Heart className="w-5 h-5" style={{ color: "#2F8F6B" }} />
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-[#2F8F6B]/15 dark:bg-[#6DD4A8]/15">
+                  <Heart className="w-5 h-5 text-[#2F8F6B] dark:text-[#6DD4A8]" />
                 </div>
-                <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#2F8F6B", letterSpacing: "0.1em" }}>Our Mission</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-[#2F8F6B] dark:text-[#6DD4A8]">Our Mission</span>
               </div>
-              <h3 className="mb-3 text-[#0F3D2E] dark:text-emerald-50" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "1.15rem", lineHeight: 1.4 }}>
+              <h3 className="mb-3 text-[#0F3D2E] dark:text-[#BEEBD7] text-balance" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "1.125rem", lineHeight: 1.4 }}>
                 Connect. Build capacity. Deploy the people the climate crisis needs.
               </h3>
-              <p className="text-[#374151] dark:!text-emerald-200/80" style={{ lineHeight: 1.9, fontSize: "0.9rem" }}>
-                Starting in the Philippines, where the need is greatest, and growing into a global network. Rooted in community, driven by people, and open to every nation ready to act.
+              <p className="text-[#4B5563] dark:text-[#94C8AF] text-sm leading-relaxed">
+                Starting in the Philippines, where the need is greatest, and growing into a global network. Rooted in community, driven by people.
               </p>
             </motion.div>
             <motion.div
-              className="rounded-2xl p-8 text-left bg-[#F0F7FF] border border-[#BAE0FD] dark:border-sky-400/25 dark:!bg-[#10271f]"
-              style={{ background: "#F0F7FF" }}
+              className="rounded-2xl p-7 sm:p-8 text-left bg-[#E6F4EE] dark:bg-[#132B23] border border-[#2F8F6B]/20 dark:border-[#6DD4A8]/20"
               variants={scrollFade}
               initial="hidden"
               whileInView="show"
               viewport={LANDING_VIEWPORT}
               transition={{ delay: reduceMotion ? 0 : 0.12 }}
               whileHover={reduceMotion ? undefined : { y: -4, transition: { duration: 0.22 } }}>
-              <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "#DBEAFE" }}>
-                  <Eye className="w-5 h-5" style={{ color: "#1E6B9A" }} />
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-[#2F8F6B]/15 dark:bg-[#6DD4A8]/15">
+                  <Eye className="w-5 h-5 text-[#2F8F6B] dark:text-[#6DD4A8]" />
                 </div>
-                <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#1E6B9A", letterSpacing: "0.1em" }}>Our Vision</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-[#2F8F6B] dark:text-[#6DD4A8]">Our Vision</span>
               </div>
-              <h3 className="mb-3 text-[#1E3A5F] dark:text-sky-100" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "1.15rem", lineHeight: 1.4 }}>
+              <h3 className="mb-3 text-[#0F3D2E] dark:text-[#BEEBD7] text-balance" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "1.125rem", lineHeight: 1.4 }}>
                 A world where no climate crisis goes unanswered.
               </h3>
-              <p className="text-[#374151] dark:!text-emerald-200/80" style={{ lineHeight: 1.9, fontSize: "0.9rem" }}>
-                Because the people and skills to respond already exist in every community. The Philippines leads the way: the nation that faces the most, teaches the most. From its shores, Skill Seed grows outward — because every climate issue has a human-driven solution.
+              <p className="text-[#4B5563] dark:text-[#94C8AF] text-sm leading-relaxed">
+                Because the people and skills to respond already exist in every community. Every climate issue has a human-driven solution.
               </p>
             </motion.div>
           </div>
@@ -441,7 +435,7 @@ export function LandingPage() {
       </section>
 
       {/* ════════════════ HOW IT WORKS ════════════════ */}
-      <section className="pt-16 pb-24 md:pt-20 md:pb-32 dark:!bg-[#10271f]" style={{ background: "#F0F9F5" }}>
+      <section className="py-20 md:py-28 bg-[#F9FAFB] dark:bg-[#0D1F18]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             className="text-center mb-14"
@@ -449,15 +443,14 @@ export function LandingPage() {
             initial="hidden"
             whileInView="show"
             viewport={LANDING_VIEWPORT}>
-            <span className="inline-block px-3 py-1 rounded-full text-xs mb-3"
-              style={{ background: "#E6F4EE", color: "#2F8F6B", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            <span className="inline-block px-3 py-1.5 rounded-full text-xs mb-4 bg-[#E6F4EE] dark:bg-[#1E3B34] text-[#2F8F6B] dark:text-[#6DD4A8] font-bold tracking-wider uppercase">
               How It Works
             </span>
-            <h2 className="mb-3 text-[#0F3D2E] dark:text-emerald-50" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "clamp(1.8rem, 3vw, 2.5rem)" }}>
+            <h2 className="mb-4 text-[#0F3D2E] dark:text-[#BEEBD7] text-balance" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "clamp(1.75rem, 3vw, 2.25rem)" }}>
               Simple. Mission-Driven. Impactful.
             </h2>
-            <p className="max-w-md mx-auto text-[#4b5563] dark:!text-emerald-200/85" style={{ lineHeight: 1.7 }}>
-              From skill building to real-world action — SkillSeed makes climate participation accessible to everyone.
+            <p className="max-w-md mx-auto text-muted-foreground dark:text-[#94C8AF] leading-relaxed">
+              From skill building to real-world action. Climate participation made accessible.
             </p>
           </motion.div>
 
@@ -468,26 +461,23 @@ export function LandingPage() {
             whileInView="show"
             viewport={LANDING_VIEWPORT}>
             {[
-              { step: "01", icon: Sprout, title: "Browse or Post", desc: "Explore short climate missions that match your interests, or post a project needing skilled volunteers.", color: "#2F8F6B", bg: "#E6F4EE" },
-              { step: "02", icon: Users, title: "Match & Connect", desc: "Get matched with the right people. Learners find mentors. Organizations find skilled volunteers instantly.", color: "#1EB89A", bg: "#D1FAE5" },
-              { step: "03", icon: TrendingUp, title: "Learn & Make Impact", desc: "Complete missions, earn verified points, and see your real environmental impact measured and celebrated.", color: "#059669", bg: "#A7F3D0" },
-            ].map(({ step, icon: Icon, title, desc, color, bg }) => (
+              { step: "1", icon: Sprout, title: "Browse or Post", desc: "Explore short climate missions that match your interests, or post a project needing volunteers." },
+              { step: "2", icon: Users, title: "Match & Connect", desc: "Get matched with the right people. Learners find mentors. Organizations find skilled volunteers." },
+              { step: "3", icon: TrendingUp, title: "Learn & Make Impact", desc: "Complete missions, earn verified points, and see your real environmental impact celebrated." },
+            ].map(({ step, icon: Icon, title, desc }) => (
               <motion.div
                 key={step}
                 variants={staggerCard}
-                whileHover={reduceMotion ? undefined : { y: -6, boxShadow: "0 16px 40px rgba(15,61,46,0.12)" }}
-                className="relative bg-white rounded-2xl p-8 text-center border border-gray-200 dark:border-emerald-400/35"
-                style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-                <motion.div
-                  className="relative inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-5"
-                  style={{ background: bg }}
-                  whileHover={reduceMotion ? undefined : { rotate: [0, -4, 4, 0], transition: { duration: 0.5 } }}>
-                  <Icon className="w-7 h-7" style={{ color }} />
-                  <span className="absolute -top-2 -right-2 w-7 h-7 rounded-full text-white flex items-center justify-center text-sm ring-2 ring-white shadow-md"
-                    style={{ background: color, fontWeight: 800 }}>{step.slice(1)}</span>
-                </motion.div>
-                <h3 className="mb-3 text-[#0F3D2E] dark:text-emerald-50" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 700 }}>{title}</h3>
-                <p className="text-sm text-[#4b5563] dark:!text-emerald-200/82" style={{ lineHeight: 1.7 }}>{desc}</p>
+                whileHover={reduceMotion ? undefined : { y: -4 }}
+                className="relative bg-white dark:bg-[#132B23] rounded-2xl p-7 text-center border border-border dark:border-[#6DD4A8]/15 shadow-sm">
+                <div className="relative inline-flex items-center justify-center w-14 h-14 rounded-xl mb-5 bg-[#E6F4EE] dark:bg-[#1E3B34]">
+                  <Icon className="w-6 h-6 text-[#2F8F6B] dark:text-[#6DD4A8]" />
+                  <span className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full text-white flex items-center justify-center text-xs font-bold bg-[#0F3D2E] dark:bg-[#6DD4A8] dark:text-[#0A2E20] ring-2 ring-white dark:ring-[#132B23]">
+                    {step}
+                  </span>
+                </div>
+                <h3 className="mb-2 text-[#0F3D2E] dark:text-[#BEEBD7]" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 700 }}>{title}</h3>
+                <p className="text-sm text-muted-foreground dark:text-[#94C8AF] leading-relaxed">{desc}</p>
               </motion.div>
             ))}
           </motion.div>
@@ -495,48 +485,47 @@ export function LandingPage() {
       </section>
 
       {/* ════════════════ STATS ════════════════ */}
-      <section className="py-16 relative overflow-hidden" style={{ background: "#0F3D2E" }}>
+      <section className="py-16 md:py-20 relative overflow-hidden bg-[#0F3D2E]">
         {!reduceMotion && (
           <motion.div
             aria-hidden
-            className="pointer-events-none absolute inset-0 opacity-30"
+            className="pointer-events-none absolute inset-0 opacity-25"
             style={{
-              background: "radial-gradient(ellipse 80% 60% at 50% 50%, rgba(52,211,153,0.35) 0%, transparent 55%)",
+              background: "radial-gradient(ellipse 70% 50% at 50% 50%, rgba(109,212,168,0.3) 0%, transparent 60%)",
             }}
-            animate={{ opacity: [0.22, 0.38, 0.22], scale: [1, 1.03, 1] }}
+            animate={{ opacity: [0.2, 0.3, 0.2] }}
             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
           />
         )}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-[1]">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-[1]">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
             <AnimatedStat value={12840} suffix="+" label="Active Members" desc="across 87 countries" />
             <AnimatedStat value={1240} suffix="+" label="Missions Completed" desc="verified impact" />
             <AnimatedStat value={87} suffix="" label="Countries Reached" desc="and growing" />
           </div>
-          <p className="text-center text-xs mt-10 max-w-md mx-auto px-4" style={{ color: "rgba(255,255,255,0.62)", lineHeight: 1.5 }}>
-            Figures updated monthly. Totals reflect activity across the platform.
+          <p className="text-center text-xs mt-8 text-white/50">
+            Figures updated monthly
           </p>
         </div>
       </section>
 
       {/* ════════════════ WHO IT'S FOR ════════════════ */}
-      <section className="py-20 dark:!bg-[#10271f]" style={{ background: "white" }}>
+      <section className="py-20 md:py-28 bg-background dark:bg-[#0D1F18]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
-            className="text-center mb-12"
+            className="text-center mb-14"
             variants={scrollFade}
             initial="hidden"
             whileInView="show"
             viewport={LANDING_VIEWPORT}>
-            <span className="inline-block px-3 py-1 rounded-full text-xs mb-3"
-              style={{ background: "#E6F4EE", color: "#2F8F6B", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            <span className="inline-block px-3 py-1.5 rounded-full text-xs mb-4 bg-[#E6F4EE] dark:bg-[#1E3B34] text-[#2F8F6B] dark:text-[#6DD4A8] font-bold tracking-wider uppercase">
               For Everyone
             </span>
-            <h2 className="mb-3 text-[#0F3D2E] dark:text-emerald-50" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "clamp(1.8rem, 3vw, 2.5rem)" }}>
+            <h2 className="mb-4 text-[#0F3D2E] dark:text-[#BEEBD7] text-balance" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "clamp(1.75rem, 3vw, 2.25rem)" }}>
               However you show up, you belong here
             </h2>
-            <p className="max-w-md mx-auto text-[#4b5563] dark:!text-emerald-200/88" style={{ lineHeight: 1.7 }}>
-              SkillSeed is built for every kind of climate participant — from curious beginners to seasoned professionals to leading organizations.
+            <p className="max-w-md mx-auto text-muted-foreground dark:text-[#94C8AF] leading-relaxed">
+              SkillSeed is built for every kind of climate participant.
             </p>
           </motion.div>
 
