@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router';
-import { BookOpen, Filter, Loader2, Search, ShieldCheck, Sparkles } from 'lucide-react';
+import { BookOpen, Filter, Search, ShieldCheck, Sparkles, RefreshCw, AlertTriangle, Leaf } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { getCurrentProfile } from '../utils/matchService';
 import { 
@@ -11,9 +11,62 @@ import {
   startQuest
 } from '../utils/questService';
 import { QuestCard } from '../components/QuestCard';
+import { GridSkeleton } from '../components/ui/loading-skeleton';
+import { EmptyState } from '../components/ui/empty-state';
 import type { Profile, Quest, QuestProgress } from '../types/database';
 
 type TabType = 'beginner' | 'advanced' | 'my-quests';
+
+// ============================================================================
+// Skeleton Components
+// ============================================================================
+
+function QuestCardSkeleton() {
+  return (
+    <div className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] overflow-hidden animate-pulse">
+      <div className="h-24 bg-slate-100 dark:bg-[#1E3B34]" />
+      <div className="p-4">
+        <div className="flex gap-2 mb-3">
+          <div className="h-4 w-16 bg-slate-100 dark:bg-[#1E3B34] rounded" />
+          <div className="h-4 w-20 bg-slate-100 dark:bg-[#1E3B34] rounded" />
+        </div>
+        <div className="h-4 w-3/4 bg-slate-100 dark:bg-[#1E3B34] rounded mb-2" />
+        <div className="h-3 w-full bg-slate-100 dark:bg-[#1E3B34] rounded mb-3" />
+        <div className="h-3 w-1/2 bg-slate-100 dark:bg-[#1E3B34] rounded mb-4" />
+        <div className="h-9 w-full bg-slate-100 dark:bg-[#1E3B34] rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
+function KPIStripSkeleton() {
+  return (
+    <div className="grid grid-cols-3 gap-3">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4 animate-pulse">
+          <div className="h-3 w-16 bg-slate-100 dark:bg-[#1E3B34] rounded mb-2" />
+          <div className="h-7 w-10 bg-slate-100 dark:bg-[#1E3B34] rounded" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function FilterBarSkeleton() {
+  return (
+    <div className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4 animate-pulse">
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex-1 h-10 bg-slate-100 dark:bg-[#1E3B34] rounded-lg" />
+        <div className="h-10 w-32 bg-slate-100 dark:bg-[#1E3B34] rounded-lg" />
+        <div className="h-10 w-28 bg-slate-100 dark:bg-[#1E3B34] rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Main Component
+// ============================================================================
 
 export function HandsOnQuests() {
   const { user, loading: authLoading } = useAuth();
@@ -27,6 +80,7 @@ export function HandsOnQuests() {
   const [stats, setStats] = useState({ beginnerCount: 0, advancedCount: 0 });
   const [activeTab, setActiveTab] = useState<TabType>('beginner');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'not_started' | 'in_progress' | 'submitted' | 'verified' | 'rejected'>('all');
   const [sortBy, setSortBy] = useState<'recommended' | 'time' | 'points'>('recommended');
@@ -38,6 +92,7 @@ export function HandsOnQuests() {
 
     async function loadData() {
       setLoading(true);
+      setError(null);
       try {
         // Fetch quests and stats (always available)
         const [questsData, statsData] = await Promise.all([
@@ -69,6 +124,7 @@ export function HandsOnQuests() {
         }
       } catch (err) {
         console.error('Error loading quests:', err);
+        setError('Failed to load quests. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -162,27 +218,34 @@ export function HandsOnQuests() {
     progress: progressMap[q.id] ?? null
   }));
 
-  // Loading state
+  const hasActiveFilters = query !== '' || statusFilter !== 'all' || sortBy !== 'recommended';
+
+  function clearAllFilters() {
+    setQuery('');
+    setStatusFilter('all');
+    setSortBy('recommended');
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Loading State
+  // ══════════════════════════════════════════════════════════════════════════
   if (loading || authLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0D1F18]">
-        <div className="bg-gradient-to-br from-[#0F3D2E] to-[#1A5C43] py-12">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <div className="h-7 w-64 bg-white/20 rounded animate-pulse" />
-            <div className="h-10 w-72 bg-white/10 rounded animate-pulse mt-4" />
-            <div className="h-5 w-[520px] max-w-full bg-white/10 rounded animate-pulse mt-3" />
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="h-20 rounded-2xl bg-white/10 animate-pulse" />
-              ))}
-            </div>
+      <div className="min-h-screen bg-slate-50 dark:bg-[#0D1F18]">
+        {/* Header skeleton */}
+        <div className="bg-white dark:bg-[#132B23] border-b border-slate-200 dark:border-[#1E3B34]">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="h-4 w-24 bg-slate-100 dark:bg-[#1E3B34] rounded mb-2 animate-pulse" />
+            <div className="h-8 w-48 bg-slate-100 dark:bg-[#1E3B34] rounded mb-3 animate-pulse" />
+            <div className="h-4 w-72 bg-slate-100 dark:bg-[#1E3B34] rounded animate-pulse" />
           </div>
         </div>
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
-          <div className="h-14 bg-white rounded-2xl border border-gray-100 animate-pulse" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-60 bg-white rounded-2xl border border-gray-100 animate-pulse" />
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+          <KPIStripSkeleton />
+          <FilterBarSkeleton />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <QuestCardSkeleton key={i} />
             ))}
           </div>
         </div>
@@ -190,158 +253,151 @@ export function HandsOnQuests() {
     );
   }
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // Error State
+  // ══════════════════════════════════════════════════════════════════════════
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-[#0D1F18] flex items-center justify-center px-4">
+        <div className="text-center max-w-sm">
+          <div className="w-14 h-14 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-7 h-7 text-red-600 dark:text-red-400" />
+          </div>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Something went wrong</h2>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0F3D2E] text-white text-sm font-medium rounded-lg hover:bg-[#1a5241] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] focus-visible:ring-offset-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Main Render
+  // ══════════════════════════════════════════════════════════════════════════
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0D1F18]">
-      {/* ══════════════════════════════════════════════════════════════════════
-          HERO BANNER
-          ══════════════════════════════════════════════════════════════════════ */}
-      <div className="bg-gradient-to-br from-[#0F3D2E] to-[#1A5C43] py-12 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-80 h-80 rounded-full bg-[#2F8F6B]/10 blur-3xl" />
-        <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0D1F18]">
+      {/* ─────────────────────────────────────────────────────────────────────
+          Page Header (matches Missions pattern)
+      ───────────────────────────────────────────────────────────────────── */}
+      <header className="bg-white dark:bg-[#132B23] border-b border-slate-200 dark:border-[#1E3B34]">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <BookOpen className="w-5 h-5 text-emerald-300" />
-                <span className="text-white text-xs font-semibold tracking-wide uppercase">
-                  Hands-on learning
-                </span>
-              </div>
-              <h1 className="text-[#BEEBD7] dark:text-[#B7C96A] font-[Manrope] font-bold text-3xl md:text-4xl mb-2">Learn by doing</h1>
-              <p className="text-white max-w-xl text-sm md:text-base">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#2F8F6B] dark:text-[#6DD4A8] mb-1 flex items-center gap-1.5">
+                <BookOpen className="w-3.5 h-3.5" />
+                Hands-on Learning
+              </p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white" style={{ fontFamily: "'Manrope', sans-serif" }}>
+                Learn by Doing
+              </h1>
+              <p className="text-sm text-slate-600 dark:text-[#94C8AF] mt-1">
                 Complete real-world quests, earn badges, and build a verified record of climate action.
               </p>
             </div>
-
-            {user ? (
-              <div className="bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/10 min-w-[260px]">
-                <p className="text-white text-sm font-semibold">Your progress</p>
-                <div className="grid grid-cols-3 gap-3 mt-3">
-                  <div className="text-center">
-                    <p className="text-white font-[Manrope] font-bold text-xl">{inProgressCount}</p>
-                    <p className="text-white text-xs">In progress</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-white font-[Manrope] font-bold text-xl">{pendingCount}</p>
-                    <p className="text-white text-xs">Pending</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-white font-[Manrope] font-bold text-xl">{completedCount}</p>
-                    <p className="text-white text-xs">Completed</p>
-                  </div>
-                </div>
-                {needsResubmissionCount > 0 && (
-                  <div className="mt-3 text-xs text-amber-200 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4" />
-                    {needsResubmissionCount} need resubmission
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/10">
-                <p className="text-white text-sm font-semibold">Sign in to track progress</p>
-                <p className="text-white text-xs mt-1">
-                  Save your quests, submissions, and badges.
-                </p>
-              </div>
+            {/* Verifier link (if user is verifier) */}
+            {profile?.is_verifier && (
+              <Link
+                to="/verifier"
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-medium rounded-lg border border-slate-200 dark:border-[#1E3B34] bg-white dark:bg-transparent text-slate-700 dark:text-[#BEEBD7] hover:bg-slate-50 dark:hover:bg-[#1E3B34] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] whitespace-nowrap"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                Verifier Dashboard
+              </Link>
             )}
           </div>
-
-          {/* KPI strip */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
-            <div className="bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/10">
-              <p className="text-white text-xs uppercase tracking-wide">Beginner quests</p>
-              <p className="text-white font-[Manrope] font-bold text-2xl mt-1">{stats.beginnerCount.toLocaleString()}</p>
-              <p className="text-white text-xs mt-1">Earn badges with short missions</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/10">
-              <p className="text-white text-xs uppercase tracking-wide">Advanced quests</p>
-              <p className="text-white font-[Manrope] font-bold text-2xl mt-1">{stats.advancedCount.toLocaleString()}</p>
-              <p className="text-white text-xs mt-1">Unlock verified certificates</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/10">
-              <p className="text-white text-xs uppercase tracking-wide">Badges earned</p>
-              <p className="text-white font-[Manrope] font-bold text-2xl mt-1">{userBadgeCount.toLocaleString()}</p>
-              <p className="text-white text-xs mt-1">Your visible proof of action</p>
-            </div>
-          </div>
         </div>
-      </div>
+      </header>
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          TAB NAVIGATION
-          ══════════════════════════════════════════════════════════════════════ */}
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-8">
-        <div className="flex flex-wrap items-center gap-2 border-b border-gray-200 pb-4">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+        {/* ─────────────────────────────────────────────────────────────────────
+            KPI Strip (matches Missions pattern)
+        ───────────────────────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-3 gap-3">
           <button
             onClick={() => setActiveTab('beginner')}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-              activeTab === 'beginner'
-                ? 'bg-green-100 text-green-700'
-                : 'text-gray-500 hover:bg-gray-100'
+            className={`text-left bg-white dark:bg-[#132B23] rounded-xl border p-4 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] ${
+              activeTab === 'beginner' 
+                ? 'border-[#2F8F6B] dark:border-[#6DD4A8]' 
+                : 'border-slate-200 dark:border-[#1E3B34] hover:border-[#2F8F6B]/50'
             }`}
           >
-            Beginner quests
+            <p className="text-xs text-slate-500 dark:text-[#94C8AF] font-medium mb-1">Beginner Quests</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.beginnerCount}</p>
           </button>
           <button
             onClick={() => setActiveTab('advanced')}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-              activeTab === 'advanced'
-                ? 'bg-yellow-100 text-yellow-700'
-                : 'text-gray-500 hover:bg-gray-100'
+            className={`text-left bg-white dark:bg-[#132B23] rounded-xl border p-4 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
+              activeTab === 'advanced' 
+                ? 'border-amber-400 dark:border-amber-500' 
+                : 'border-slate-200 dark:border-[#1E3B34] hover:border-amber-300'
             }`}
           >
-            Advanced quests
+            <p className="text-xs text-slate-500 dark:text-[#94C8AF] font-medium mb-1">Advanced Quests</p>
+            <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{stats.advancedCount}</p>
           </button>
-          {user && (
+          {user ? (
             <button
               onClick={() => setActiveTab('my-quests')}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-                activeTab === 'my-quests'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-500 hover:bg-gray-100'
+              className={`text-left bg-white dark:bg-[#132B23] rounded-xl border p-4 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] ${
+                activeTab === 'my-quests' 
+                  ? 'border-[#2F8F6B] dark:border-[#6DD4A8]' 
+                  : 'border-slate-200 dark:border-[#1E3B34] hover:border-[#2F8F6B]/50'
               }`}
             >
-              My quests
+              <p className="text-xs text-slate-500 dark:text-[#94C8AF] font-medium mb-1 flex items-center gap-1">
+                My Progress
+                {needsResubmissionCount > 0 && (
+                  <span className="inline-flex items-center gap-0.5 text-amber-600 dark:text-amber-400">
+                    <Sparkles className="w-3 h-3" />
+                  </span>
+                )}
+              </p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                {completedCount}<span className="text-sm font-normal text-slate-400 dark:text-[#6B8F7F]">/{inProgressCount + completedCount + pendingCount}</span>
+              </p>
             </button>
-          )}
-          
-          {/* Verifier link (if user is verifier) */}
-          {profile?.is_verifier && (
-            <Link
-              to="/verifier"
-              className="ml-auto px-4 py-2 rounded-xl text-sm font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 transition-all duration-200 inline-flex items-center gap-2"
-            >
-              <ShieldCheck className="w-4 h-4" />
-              Verifier dashboard
-            </Link>
+          ) : (
+            <div className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
+              <p className="text-xs text-slate-500 dark:text-[#94C8AF] font-medium mb-1">Badges Earned</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white">{userBadgeCount}</p>
+            </div>
           )}
         </div>
-      </div>
 
-      {/* Search + filters */}
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-6">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_6px_20px_rgba(15,61,46,0.08)] p-4">
-          <div className="flex flex-col md:flex-row md:items-center gap-3">
+        {/* ─────────────────────────────────────────────────────────────────────
+            Filter Bar (matches Missions pattern)
+        ───────────────────────────────────────────────────────────────────── */}
+        <div className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
+          <div className="flex flex-col md:flex-row gap-3">
+            {/* Search */}
             <div className="flex-1 relative">
-              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search quests, skills, categories..."
-                className="w-full min-h-10 pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30 focus:border-[#2F8F6B]"
+                className="w-full min-h-[40px] pl-10 pr-4 py-2 border border-slate-200 dark:border-[#1E3B34] bg-white dark:bg-[#0D1F18] rounded-lg text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30 focus:border-[#2F8F6B] transition-all text-slate-900 dark:text-white"
               />
             </div>
+            {/* Filters toggle */}
             <button
               onClick={() => setShowFilters((v) => !v)}
-              className="min-h-10 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:border-[#2F8F6B]/40 hover:bg-[#E6F4EE] transition-all duration-200 inline-flex items-center gap-2"
+              className="min-h-[40px] px-4 py-2 rounded-lg border border-slate-200 dark:border-[#1E3B34] text-sm font-medium text-slate-700 dark:text-[#BEEBD7] hover:bg-slate-50 dark:hover:bg-[#1E3B34] transition-colors inline-flex items-center gap-2"
             >
               <Filter className="w-4 h-4" />
               Filters
             </button>
+            {/* Sort */}
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as 'recommended' | 'time' | 'points')}
-              className="min-h-10 px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30"
+              className="min-h-[40px] px-3 py-2 border border-slate-200 dark:border-[#1E3B34] rounded-lg text-sm bg-white dark:bg-[#0D1F18] text-slate-700 dark:text-[#BEEBD7] focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30"
               aria-label="Sort quests"
             >
               <option value="recommended">Recommended</option>
@@ -350,8 +406,9 @@ export function HandsOnQuests() {
             </select>
           </div>
 
+          {/* Expanded filters */}
           {showFilters && (
-            <div className="mt-3 flex flex-col sm:flex-row gap-3">
+            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-[#1E3B34] flex flex-col sm:flex-row gap-3">
               <select
                 value={statusFilter}
                 onChange={(e) =>
@@ -359,7 +416,7 @@ export function HandsOnQuests() {
                     e.target.value as 'all' | 'not_started' | 'in_progress' | 'submitted' | 'verified' | 'rejected'
                   )
                 }
-                className="min-h-10 px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30"
+                className="min-h-[40px] px-3 py-2 border border-slate-200 dark:border-[#1E3B34] rounded-lg text-sm bg-white dark:bg-[#0D1F18] text-slate-700 dark:text-[#BEEBD7] focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30"
                 aria-label="Status filter"
               >
                 <option value="all">All statuses</option>
@@ -370,14 +427,10 @@ export function HandsOnQuests() {
                 <option value="rejected">Needs resubmission</option>
               </select>
 
-              {(query || statusFilter !== 'all' || sortBy !== 'recommended') && (
+              {hasActiveFilters && (
                 <button
-                  onClick={() => {
-                    setQuery('');
-                    setStatusFilter('all');
-                    setSortBy('recommended');
-                  }}
-                  className="min-h-10 px-4 py-2.5 rounded-xl text-sm font-semibold text-[#2F8F6B] hover:text-[#0F3D2E] underline text-left"
+                  onClick={clearAllFilters}
+                  className="min-h-[40px] px-4 py-2 rounded-lg text-sm font-medium text-[#2F8F6B] dark:text-[#6DD4A8] hover:underline"
                 >
                   Clear filters
                 </button>
@@ -385,30 +438,34 @@ export function HandsOnQuests() {
             </div>
           )}
         </div>
-      </div>
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          QUEST CARDS GRID
-          ══════════════════════════════════════════════════════════════════════ */}
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
+        {/* ─────────────────────────────────────────────────────────────────────
+            Quest Cards Grid
+        ───────────────────────────────────────────────────────────────────── */}
         {filteredQuests.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
-            {activeTab === 'my-quests' ? (
-              <>
-                <p className="text-gray-500 text-sm mb-3">You haven’t started any quests yet.</p>
-                <button
-                  onClick={() => setActiveTab('beginner')}
-                  className="text-[#0F3D2E] text-sm font-semibold hover:underline"
-                >
-                  Browse beginner quests →
-                </button>
-              </>
-            ) : (
-              <p className="text-gray-500 text-sm">No quests match your filters.</p>
-            )}
-          </div>
+          activeTab === 'my-quests' ? (
+            <EmptyState
+              icon={Leaf}
+              title="No quests started yet"
+              description="Start your first quest to begin your climate action journey."
+              action={{
+                label: "Browse beginner quests",
+                onClick: () => setActiveTab('beginner')
+              }}
+            />
+          ) : (
+            <EmptyState
+              icon={Search}
+              title="No quests found"
+              description="Try adjusting your search or filters to find what you're looking for."
+              action={{
+                label: "Clear filters",
+                onClick: clearAllFilters
+              }}
+            />
+          )
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {myQuestsWithProgress.map(({ quest, progress }) => (
               <QuestCard
                 key={quest.id}
@@ -419,27 +476,27 @@ export function HandsOnQuests() {
             ))}
           </div>
         )}
-      </div>
 
-      {/* Sign-in prompt for guests */}
-      {!user && (
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 pb-12">
-          <div className="bg-gradient-to-r from-[#1a3a2a] to-green-700 rounded-2xl p-8 text-center">
-            <h3 className="text-white text-xl font-bold mb-2">
+        {/* ─────────────────────────────────────────────────────────────────────
+            Sign-in prompt for guests
+        ───────────────────────────────────────────────────────────────────── */}
+        {!user && (
+          <div className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-6 text-center">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
               Ready to start learning?
             </h3>
-            <p className="text-green-200 text-sm mb-4">
+            <p className="text-sm text-slate-600 dark:text-[#94C8AF] mb-5 max-w-md mx-auto">
               Sign in to track your progress, earn badges, and get certified.
             </p>
             <Link
               to="/auth"
-              className="inline-block bg-white text-[#1a3a2a] px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-green-50 transition"
+              className="inline-flex items-center justify-center min-h-[44px] bg-[#0F3D2E] text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#2F8F6B] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] focus-visible:ring-offset-2"
             >
-              Sign In to Start →
+              Sign In to Start
             </Link>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

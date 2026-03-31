@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router";
 import { motion, useReducedMotion } from "motion/react";
 import {
@@ -9,20 +9,21 @@ import {
   Zap,
   Wrench,
   Building2,
-  Star,
   Globe,
-  CheckCircle2,
   Clock,
   TrendingUp,
   Heart,
   Eye,
   Loader2,
+  TreePine,
+  Recycle,
+  CheckCircle,
+  Target,
+  FileCheck,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { fetchAllQuests } from "../utils/questService";
 import type { Quest } from "../types/database";
-
-const IMG_COMMUNITY = "https://images.unsplash.com/photo-1768306662463-4e3f6c858889?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjbGltYXRlJTIwYWN0aW9uJTIwdm9sdW50ZWVyJTIwY29tbXVuaXR5JTIwb3V0ZG9vcnxlbnwxfHx8fDE3NzI4NTQ4ODJ8MA&ixlib=rb-4.1.0&q=80&w=1080";
 
 const LANDING_VIEWPORT = { once: true as const, margin: "-48px 0px", amount: 0.2 as const };
 
@@ -77,71 +78,50 @@ function FloatingSeeds({ reduced }: { reduced: boolean }) {
   );
 }
 
-function useCounter(target: number, duration = 2000, trigger = false) {
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    if (!trigger) return;
-    let start = 0;
-    const increment = target / (duration / 16);
-    const timer = setInterval(() => {
-      start += increment;
-      if (start >= target) { setCount(target); clearInterval(timer); }
-      else setCount(Math.floor(start));
-    }, 16);
-    return () => clearInterval(timer);
-  }, [trigger, target, duration]);
-  return count;
-}
-
-function AnimatedStat({ value, suffix, label, desc, recencyLabel = "Updated monthly" }: { value: number; suffix: string; label: string; desc?: string; recencyLabel?: string }) {
-  const [triggered, setTriggered] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const count = useCounter(value, 2000, triggered);
-  useEffect(() => {
-    const observer = new IntersectionObserver(([e]) => { if (e.isIntersecting) setTriggered(true); }, { threshold: 0.5 });
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, []);
+function PreLaunchStat({ label, desc }: { label: string; desc?: string }) {
   return (
-    <div ref={ref} className="text-center">
+    <div className="text-center">
       <div className="text-4xl sm:text-5xl mb-1" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, color: "white" }}>
-        {count.toLocaleString()}{suffix}
+        —
       </div>
       <div className="text-sm" style={{ color: "rgba(255,255,255,0.9)", fontWeight: 600 }}>{label}</div>
       {desc && <div className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.68)" }}>{desc}</div>}
-      {recencyLabel && (
-        <div className="text-[10px] mt-2 leading-tight" style={{ color: "rgba(255,255,255,0.55)" }}>{recencyLabel}</div>
-      )}
     </div>
   );
 }
 
-// Tier-based color mapping for quest cards
-function getQuestColor(quest: Quest): string {
-  if (quest.category?.toLowerCase().includes("energy")) return "#F59E0B";
-  if (quest.category?.toLowerCase().includes("waste") || quest.category?.toLowerCase().includes("soil")) return "#2F8F6B";
-  if (quest.category?.toLowerCase().includes("nature") || quest.category?.toLowerCase().includes("tree") || quest.category?.toLowerCase().includes("forest")) return "#059669";
-  if (quest.tier === "advanced") return "#3B82F6";
-  return "#2F8F6B";
-}
-
-/** Visual variety when API returns the same badge for every quest */
-function getQuestDisplayIcon(quest: Quest): string {
-  if (quest.badge_icon && quest.badge_icon !== "🏆") return quest.badge_icon;
+/** Get lucide icon component based on quest category */
+function getQuestIcon(quest: Quest): React.ReactNode {
   const c = quest.category?.toLowerCase() ?? "";
-  if (c.includes("community") || c.includes("barangay")) return "🤝";
-  if (c.includes("circular") || c.includes("repair")) return "🔧";
-  if (c.includes("waste") || c.includes("compost") || c.includes("zero")) return "♻️";
-  if (c.includes("energy")) return "⚡";
-  if (c.includes("water")) return "💧";
-  if (c.includes("tree") || c.includes("forest")) return "🌳";
-  return quest.badge_icon || "🌿";
+  const iconClass = "w-10 h-10 text-[#2F8F6B] dark:text-[#6DD4A8]";
+  
+  if (c.includes("community") || c.includes("barangay")) return <Users className={iconClass} />;
+  if (c.includes("circular") || c.includes("repair")) return <Wrench className={iconClass} />;
+  if (c.includes("waste") || c.includes("compost") || c.includes("zero")) return <Recycle className={iconClass} />;
+  if (c.includes("energy")) return <Zap className={iconClass} />;
+  if (c.includes("water")) return <Globe className={iconClass} />;
+  if (c.includes("tree") || c.includes("forest") || c.includes("nature")) return <TreePine className={iconClass} />;
+  // Default fallback
+  return <Leaf className={iconClass} />;
 }
 
-const testimonials = [
-  { name: "Maria Santos", role: "Urban Gardener · Quezon City", text: "SkillSeed helped me turn my rooftop into a productive food garden. The composting mission changed everything — I now teach my neighbors!", avatar: "MS", stars: 5 },
-  { name: "James Reyes", role: "Solar Installer · Manila", text: "I completed the energy-saving missions and landed a job with a solar NGO. The hands-on format is incredible for real learning.", avatar: "JR", stars: 5 },
-  { name: "Lena Cruz", role: "Community Organizer · Cebu", text: "Our barangay is running 3 repair cafés after learning through SkillSeed. The community challenges keep everyone motivated.", avatar: "LC", stars: 5 },
+// Pre-launch credibility features (no fake testimonials)
+const credibilityFeatures = [
+  { 
+    icon: Target, 
+    title: "Real-world missions", 
+    desc: "Short, practical activities you can complete locally." 
+  },
+  { 
+    icon: CheckCircle, 
+    title: "Volunteer-ready", 
+    desc: "Clear requirements, time estimates, and next steps." 
+  },
+  { 
+    icon: FileCheck, 
+    title: "Proof of impact", 
+    desc: "Track what you did and build a shareable record." 
+  },
 ];
 
 export function LandingPage() {
@@ -261,40 +241,27 @@ export function LandingPage() {
       icon: Sprout,
       title: "I'm a Learner",
       subtitle: "Beginner-friendly",
-      desc: "Build green skills from scratch and participate in real climate missions — no experience needed.",
+      desc: "Build climate skills from scratch with guided quests. No experience needed.",
       cta: "Start Learning",
-      bg: "#0F3D2E",
-      border: "#1e6b52",
-      iconBg: "rgba(255,255,255,0.15)",
-      iconColor: "white",
-      emphasis: true,
+      featured: false,
     },
     {
       id: "jobready",
       icon: Wrench,
-      title: "I'm Job Ready",
-      subtitle: "Skilled volunteer",
-      desc: "Deploy your existing skills on real climate projects and build a verified impact portfolio.",
-      cta: "Offer My Skills",
-      bg: "#F0F7FF",
-      border: "#BAE0FD",
-      iconBg: "#DBEAFE",
-      iconColor: "#1E6B9A",
-      textColor: "#1E3A5F",
-      emphasis: false,
+      title: "I'm a Volunteer",
+      subtitle: "Recommended",
+      desc: "Deploy your skills on real climate projects. Build a verified impact portfolio.",
+      cta: "Find Projects",
+      featured: true,
     },
     {
       id: "org",
       icon: Building2,
       title: "I'm an Organization",
-      subtitle: "Project coordinator",
-      desc: "Post climate projects and get matched with skilled volunteers and professionals immediately.",
-      cta: "Partner with us",
-      bg: "#F0FDF6",
-      border: "#BBF7D0",
-      iconBg: "#E6F4EE",
-      iconColor: "#2F8F6B",
-      emphasis: false,
+      subtitle: "Post projects",
+      desc: "Get matched with skilled volunteers for your climate initiatives.",
+      cta: "Post a Project",
+      featured: false,
     },
   ];
 
@@ -302,138 +269,110 @@ export function LandingPage() {
     <div className="overflow-x-hidden">
 
       {/* ════════════════ HERO ════════════════ */}
-      <section className="relative pt-16 pb-16 md:pb-20 lg:pb-24 overflow-hidden dark:!bg-[#0c1815]" style={{ background: "white" }}>
-        <div
-          className="pointer-events-none absolute inset-0 opacity-0 dark:opacity-[0.22] dark:mix-blend-multiply dark:saturate-75"
-          style={{ backgroundImage: `url(${IMG_COMMUNITY})`, backgroundSize: "cover", backgroundPosition: "center top" }}
-        />
+      <section className="relative pt-20 pb-16 md:pb-20 lg:pb-24 overflow-hidden bg-white dark:bg-[#0D1F18]">
         {/* subtle dot pattern */}
-        <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.04]" style={{ backgroundImage: "radial-gradient(#0F3D2E 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
+        <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: "radial-gradient(#0F3D2E 1px, transparent 1px)", backgroundSize: "32px 32px" }} aria-hidden="true" />
         <HeroAmbience reduced={reduceMotion} />
         <FloatingSeeds reduced={reduceMotion} />
 
         <motion.div
-          className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center"
+          className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center"
           initial="hidden"
           animate="show"
           variants={staggerWrap}>
-          <motion.p variants={heroItem} className="text-[10px] sm:text-xs uppercase tracking-[0.18em] text-[#2F8F6B]/85 dark:text-emerald-300/75 mb-3 font-semibold">
-            Mission-based climate learning
+          <motion.p variants={heroItem} className="text-xs uppercase tracking-widest text-slate-500 dark:text-[#6DD4A8] mb-5 font-semibold">
+            Climate skills platform
           </motion.p>
           <motion.h1
             variants={heroItem}
-            className="mb-5 text-[#0F3D2E] dark:text-[#B7C96A]"
-            style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "clamp(2.4rem, 5.5vw, 4rem)", lineHeight: 1.1, letterSpacing: "-0.02em" }}>
-            Where climate action<br />
-            <span className="text-[#2F8F6B] dark:text-[#BEEBD7]">finds its people.</span>
+            className="mb-5 text-slate-900 dark:text-[#BEEBD7] text-balance"
+            style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "clamp(2.25rem, 5vw, 3.25rem)", lineHeight: 1.1, letterSpacing: "-0.02em" }}>
+            Where climate action<br className="hidden sm:block" />
+            <span className="text-[#2F8F6B] dark:text-[#6DD4A8]">finds its people.</span>
           </motion.h1>
 
           <motion.p
             variants={heroItem}
-            className="mb-8 mx-auto text-lg text-[#4b5563] dark:!text-emerald-200/88"
-            style={{ lineHeight: 1.7, maxWidth: "580px" }}>
-            SkillSeed connects learners, skilled volunteers, and organizations to short, real-world climate missions. Learn by doing. Track your impact. Join the movement.
+            className="mb-10 mx-auto text-base sm:text-lg text-slate-600 dark:text-[#94C8AF] text-pretty"
+            style={{ lineHeight: 1.7, maxWidth: "520px" }}>
+            Connect with short, real-world climate missions. Learn by doing. Build verified skills. Make measurable impact.
           </motion.p>
 
-          <motion.div variants={heroItem} className="flex flex-wrap gap-3 justify-center mb-10">
+          <motion.div variants={heroItem} className="flex flex-col sm:flex-row gap-3 justify-center mb-10">
             <motion.button
               type="button"
               onClick={handleJoinProject}
-              whileHover={reduceMotion ? undefined : { scale: 1.02, y: -2 }}
+              whileHover={reduceMotion ? undefined : { y: -1 }}
               whileTap={reduceMotion ? undefined : { scale: 0.98 }}
-              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl text-white transition-shadow duration-200 cursor-pointer"
-              style={{ background: "linear-gradient(135deg, #0F3D2E 0%, #2F8F6B 100%)", fontWeight: 700, fontFamily: "'Manrope', sans-serif", boxShadow: "0 4px 20px rgba(47,143,107,0.4)", border: "none" }}>
+              className="inline-flex items-center justify-center gap-2 min-h-[48px] px-6 rounded-lg text-white font-semibold transition-all duration-200 cursor-pointer bg-[#0F3D2E] hover:bg-[#1a5241] active:scale-[0.98]"
+              style={{ fontFamily: "'Manrope', sans-serif" }}>
               <Users className="w-4 h-4" /> Join a Project
             </motion.button>
-            <motion.div whileHover={reduceMotion ? undefined : { y: -2 }} className="inline-flex">
+            <motion.div whileHover={reduceMotion ? undefined : { y: -1 }} className="inline-flex justify-center">
               <Link to="/hands-on"
-                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl transition-colors duration-200 bg-white dark:!bg-transparent border-2 border-[#0F3D2E] dark:border-emerald-400/55 text-[#0F3D2E] dark:text-emerald-50 hover:bg-[#F0FDF6] dark:hover:!bg-white/10"
-                style={{ fontWeight: 700, fontFamily: "'Manrope', sans-serif" }}>
-                <Sprout className="w-4 h-4" /> Learn New Skills
+                className="inline-flex items-center justify-center gap-2 min-h-[48px] px-6 rounded-lg transition-all duration-200 bg-white border border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:bg-transparent dark:border-[#6DD4A8]/60 dark:text-[#BEEBD7] dark:hover:bg-white/10 font-semibold active:scale-[0.98]"
+                style={{ fontFamily: "'Manrope', sans-serif" }}>
+                <Sprout className="w-4 h-4" /> Browse Quests
               </Link>
             </motion.div>
           </motion.div>
 
-          {/* Social proof */}
-          <motion.div variants={heroItem} className="flex flex-wrap items-center justify-center gap-6 mb-6">
-            <div className="flex items-center gap-2">
-              <div className="flex -space-x-2">
-                {["MS", "JR", "LC", "AB", "DK"].map((i, idx) => (
-                  <motion.div
-                    key={idx}
-                    className="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-xs text-white"
-                    style={{ background: ["#2F8F6B", "#059669", "#1EB89A", "#0F3D2E", "#34D399"][idx], fontWeight: 700 }}
-                    initial={reduceMotion ? false : { opacity: 0, scale: 0.5 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={
-                      reduceMotion
-                        ? { duration: 0 }
-                        : { type: "spring", stiffness: 420, damping: 22, delay: 0.45 + idx * 0.06 }
-                    }>
-                    {i}
-                  </motion.div>
-                ))}
-              </div>
-              <span className="text-sm" style={{ color: "#6B7280" }}><strong style={{ color: "#0F3D2E" }}>12,840+</strong> members</span>
-            </div>
-            {[
-              { icon: Globe, label: "87 countries" },
-              { icon: CheckCircle2, label: "Verified missions" },
-              { icon: Leaf, label: "Free to join" },
-            ].map(({ icon: Icon, label }) => (
-              <div key={label} className="flex items-center gap-1.5">
-                <Icon className="w-4 h-4" style={{ color: "#2F8F6B" }} />
-                <span className="text-sm" style={{ color: "#6B7280", fontWeight: 500 }}>{label}</span>
-              </div>
-            ))}
+          {/* Social proof - honest pre-launch indicators */}
+          <motion.div variants={heroItem} className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm text-slate-500 dark:text-[#94C8AF]">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#E8F5EF] dark:bg-[#1E3B34] text-[#0F3D2E] dark:text-[#6DD4A8] text-xs font-medium">
+              <Leaf className="w-3 h-3" /> Beta
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5" /> Starting in Philippines
+            </span>
+            <span className="hidden sm:inline text-slate-300 dark:text-[#1E3B34]">|</span>
+            <span>Free to join</span>
           </motion.div>
         </motion.div>
 
         {/* Mission & Vision cards */}
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 md:mt-16">
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-16 md:mt-20">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <motion.div
-              className="rounded-2xl p-8 text-left bg-[#F0FDF6] border border-[#BBF7D0] dark:border-emerald-400/30 dark:!bg-[#10271f] ring-2 ring-[#2F8F6B]/25 dark:ring-emerald-400/25 shadow-sm dark:shadow-none"
-              style={{ background: "#F0FDF6" }}
+              className="rounded-xl p-6 sm:p-7 text-left bg-slate-50 dark:bg-[#132B23] border border-slate-100 dark:border-[#6DD4A8]/20"
               variants={scrollFade}
               initial="hidden"
               whileInView="show"
               viewport={LANDING_VIEWPORT}
               transition={{ delay: reduceMotion ? 0 : 0.05 }}
-              whileHover={reduceMotion ? undefined : { y: -4, transition: { duration: 0.22 } }}>
+              whileHover={reduceMotion ? undefined : { y: -3, transition: { duration: 0.2 } }}>
               <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "#E6F4EE" }}>
-                  <Heart className="w-5 h-5" style={{ color: "#2F8F6B" }} />
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#0F3D2E]">
+                  <Heart className="w-4 h-4 text-white" />
                 </div>
-                <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#2F8F6B", letterSpacing: "0.1em" }}>Our Mission</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-[#6DD4A8]">Mission</span>
               </div>
-              <h3 className="mb-3 text-[#0F3D2E] dark:text-emerald-50" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "1.15rem", lineHeight: 1.4 }}>
-                Connect. Build capacity. Deploy the people the climate crisis needs.
+              <h3 className="mb-2.5 text-slate-900 dark:text-[#BEEBD7]" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 700, fontSize: "1.05rem", lineHeight: 1.4 }}>
+                Build capacity. Deploy people. Solve climate challenges.
               </h3>
-              <p className="text-[#374151] dark:!text-emerald-200/80" style={{ lineHeight: 1.9, fontSize: "0.9rem" }}>
-                Starting in the Philippines, where the need is greatest, and growing into a global network. Rooted in community, driven by people, and open to every nation ready to act.
+              <p className="text-slate-600 dark:text-[#94C8AF] text-sm leading-relaxed">
+                Starting in the Philippines and growing globally. Rooted in community, driven by people.
               </p>
             </motion.div>
             <motion.div
-              className="rounded-2xl p-8 text-left bg-[#F0F7FF] border border-[#BAE0FD] dark:border-sky-400/25 dark:!bg-[#10271f]"
-              style={{ background: "#F0F7FF" }}
+              className="rounded-xl p-6 sm:p-7 text-left bg-slate-50 dark:bg-[#132B23] border border-slate-100 dark:border-[#6DD4A8]/20"
               variants={scrollFade}
               initial="hidden"
               whileInView="show"
               viewport={LANDING_VIEWPORT}
               transition={{ delay: reduceMotion ? 0 : 0.12 }}
-              whileHover={reduceMotion ? undefined : { y: -4, transition: { duration: 0.22 } }}>
+              whileHover={reduceMotion ? undefined : { y: -3, transition: { duration: 0.2 } }}>
               <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "#DBEAFE" }}>
-                  <Eye className="w-5 h-5" style={{ color: "#1E6B9A" }} />
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#0F3D2E]">
+                  <Eye className="w-4 h-4 text-white" />
                 </div>
-                <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#1E6B9A", letterSpacing: "0.1em" }}>Our Vision</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-[#6DD4A8]">Vision</span>
               </div>
-              <h3 className="mb-3 text-[#1E3A5F] dark:text-sky-100" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "1.15rem", lineHeight: 1.4 }}>
+              <h3 className="mb-2.5 text-slate-900 dark:text-[#BEEBD7]" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 700, fontSize: "1.05rem", lineHeight: 1.4 }}>
                 A world where no climate crisis goes unanswered.
               </h3>
-              <p className="text-[#374151] dark:!text-emerald-200/80" style={{ lineHeight: 1.9, fontSize: "0.9rem" }}>
-                Because the people and skills to respond already exist in every community. The Philippines leads the way: the nation that faces the most, teaches the most. From its shores, Skill Seed grows outward — because every climate issue has a human-driven solution.
+              <p className="text-slate-600 dark:text-[#94C8AF] text-sm leading-relaxed">
+                The people and skills to respond already exist in every community.
               </p>
             </motion.div>
           </div>
@@ -441,181 +380,200 @@ export function LandingPage() {
       </section>
 
       {/* ════════════════ HOW IT WORKS ════════════════ */}
-      <section className="pt-16 pb-24 md:pt-20 md:pb-32 dark:!bg-[#10271f]" style={{ background: "#F0F9F5" }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-20 md:py-24 bg-slate-50 dark:bg-[#0A1A14]">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Section header */}
           <motion.div
             className="text-center mb-14"
             variants={scrollFade}
             initial="hidden"
             whileInView="show"
             viewport={LANDING_VIEWPORT}>
-            <span className="inline-block px-3 py-1 rounded-full text-xs mb-3"
-              style={{ background: "#E6F4EE", color: "#2F8F6B", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-              How It Works
+            <span className="inline-block px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wide mb-4 bg-[#0F3D2E]/10 text-[#0F3D2E] dark:bg-[#6DD4A8]/15 dark:text-[#6DD4A8]">
+              How it works
             </span>
-            <h2 className="mb-3 text-[#0F3D2E] dark:text-emerald-50" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "clamp(1.8rem, 3vw, 2.5rem)" }}>
-              Simple. Mission-Driven. Impactful.
+            <h2 className="mb-3 text-slate-900 dark:text-[#BEEBD7]" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "clamp(1.5rem, 3vw, 2rem)" }}>
+              From signup to impact in three steps
             </h2>
-            <p className="max-w-md mx-auto text-[#4b5563] dark:!text-emerald-200/85" style={{ lineHeight: 1.7 }}>
-              From skill building to real-world action — SkillSeed makes climate participation accessible to everyone.
+            <p className="max-w-lg mx-auto text-slate-600 dark:text-[#94C8AF]">
+              Whether you want to learn, volunteer, or post projects, getting started takes minutes.
             </p>
           </motion.div>
 
+          {/* Step cards */}
           <motion.div
-            className="grid grid-cols-1 md:grid-cols-3 gap-6"
+            className="grid grid-cols-1 md:grid-cols-3 gap-5"
             variants={staggerInView}
             initial="hidden"
             whileInView="show"
             viewport={LANDING_VIEWPORT}>
             {[
-              { step: "01", icon: Sprout, title: "Browse or Post", desc: "Explore short climate missions that match your interests, or post a project needing skilled volunteers.", color: "#2F8F6B", bg: "#E6F4EE" },
-              { step: "02", icon: Users, title: "Match & Connect", desc: "Get matched with the right people. Learners find mentors. Organizations find skilled volunteers instantly.", color: "#1EB89A", bg: "#D1FAE5" },
-              { step: "03", icon: TrendingUp, title: "Learn & Make Impact", desc: "Complete missions, earn verified points, and see your real environmental impact measured and celebrated.", color: "#059669", bg: "#A7F3D0" },
-            ].map(({ step, icon: Icon, title, desc, color, bg }) => (
+              { 
+                step: "01", 
+                icon: Sprout, 
+                title: "Browse or Post", 
+                desc: "Browse real climate missions, or post a project that needs skilled volunteers.",
+                cta: { label: "Browse missions", to: "/hands-on" }
+              },
+              { 
+                step: "02", 
+                icon: Users, 
+                title: "Match & Connect", 
+                desc: "Get matched with people who can help. Volunteers find projects; organizers find support.",
+                cta: { label: "See how matching works", to: "/about" }
+              },
+              { 
+                step: "03", 
+                icon: TrendingUp, 
+                title: "Make Impact", 
+                desc: "Complete missions, submit proof, and track outcomes as you build an impact portfolio.",
+                cta: { label: "View sample portfolio", to: "/progress" }
+              },
+            ].map(({ step, icon: Icon, title, desc, cta }) => (
               <motion.div
                 key={step}
                 variants={staggerCard}
-                whileHover={reduceMotion ? undefined : { y: -6, boxShadow: "0 16px 40px rgba(15,61,46,0.12)" }}
-                className="relative bg-white rounded-2xl p-8 text-center border border-gray-200 dark:border-emerald-400/35"
-                style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-                <motion.div
-                  className="relative inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-5"
-                  style={{ background: bg }}
-                  whileHover={reduceMotion ? undefined : { rotate: [0, -4, 4, 0], transition: { duration: 0.5 } }}>
-                  <Icon className="w-7 h-7" style={{ color }} />
-                  <span className="absolute -top-2 -right-2 w-7 h-7 rounded-full text-white flex items-center justify-center text-sm ring-2 ring-white shadow-md"
-                    style={{ background: color, fontWeight: 800 }}>{step.slice(1)}</span>
-                </motion.div>
-                <h3 className="mb-3 text-[#0F3D2E] dark:text-emerald-50" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 700 }}>{title}</h3>
-                <p className="text-sm text-[#4b5563] dark:!text-emerald-200/82" style={{ lineHeight: 1.7 }}>{desc}</p>
+                whileHover={reduceMotion ? undefined : { y: -4, boxShadow: "0 12px 24px -8px rgba(15, 61, 46, 0.15)" }}
+                className="relative bg-white dark:bg-[#132B23] rounded-xl p-6 border border-slate-200 dark:border-[#1E3B34] shadow-sm hover:border-[#2F8F6B]/40 dark:hover:border-[#6DD4A8]/40 transition-all duration-200 focus-within:ring-2 focus-within:ring-[#2F8F6B] focus-within:ring-offset-2 dark:focus-within:ring-offset-[#0A1A14]">
+                {/* Step number badge */}
+                <span className="absolute top-5 right-5 text-[11px] font-bold text-slate-300 dark:text-[#1E3B34] tracking-wide">
+                  {step}
+                </span>
+                
+                {/* Icon */}
+                <div className="w-11 h-11 rounded-lg flex items-center justify-center mb-5 bg-[#E8F5EF] dark:bg-[#1E3B34]">
+                  <Icon className="w-5 h-5 text-[#0F3D2E] dark:text-[#6DD4A8]" />
+                </div>
+                
+                {/* Title */}
+                <h3 className="mb-2 text-slate-900 dark:text-[#BEEBD7]" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 700, fontSize: "1.05rem" }}>
+                  {title}
+                </h3>
+                
+                {/* Description */}
+                <p className="text-sm text-slate-600 dark:text-[#94C8AF] leading-relaxed mb-4">
+                  {desc}
+                </p>
+                
+                {/* Micro-CTA link */}
+                <Link 
+                  to={cta.to} 
+                  className="inline-flex items-center gap-1 text-sm font-medium text-[#2F8F6B] dark:text-[#6DD4A8] hover:text-[#0F3D2E] dark:hover:text-[#BEEBD7] transition-colors min-h-[44px] focus:outline-none focus-visible:underline"
+                >
+                  {cta.label}
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
               </motion.div>
             ))}
           </motion.div>
         </div>
       </section>
 
-      {/* ════════════════ STATS ════════════════ */}
-      <section className="py-16 relative overflow-hidden" style={{ background: "#0F3D2E" }}>
+      {/* ════════════════ STATS (Pre-launch) ════════════════ */}
+      <section className="py-16 md:py-20 relative overflow-hidden bg-[#0F3D2E]">
         {!reduceMotion && (
           <motion.div
             aria-hidden
-            className="pointer-events-none absolute inset-0 opacity-30"
+            className="pointer-events-none absolute inset-0 opacity-25"
             style={{
-              background: "radial-gradient(ellipse 80% 60% at 50% 50%, rgba(52,211,153,0.35) 0%, transparent 55%)",
+              background: "radial-gradient(ellipse 70% 50% at 50% 50%, rgba(109,212,168,0.3) 0%, transparent 60%)",
             }}
-            animate={{ opacity: [0.22, 0.38, 0.22], scale: [1, 1.03, 1] }}
+            animate={{ opacity: [0.2, 0.3, 0.2] }}
             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
           />
         )}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-[1]">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
-            <AnimatedStat value={12840} suffix="+" label="Active Members" desc="across 87 countries" />
-            <AnimatedStat value={1240} suffix="+" label="Missions Completed" desc="verified impact" />
-            <AnimatedStat value={87} suffix="" label="Countries Reached" desc="and growing" />
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-[1]">
+          {/* Pre-launch label */}
+          <div className="text-center mb-6">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-white/80 text-xs font-medium">
+              <Leaf className="w-3 h-3" /> Pre-launch
+            </span>
           </div>
-          <p className="text-center text-xs mt-10 max-w-md mx-auto px-4" style={{ color: "rgba(255,255,255,0.62)", lineHeight: 1.5 }}>
-            Figures updated monthly. Totals reflect activity across the platform.
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
+            <PreLaunchStat label="Members" desc="launching soon" />
+            <PreLaunchStat label="Missions" desc="ready to go" />
+            <PreLaunchStat label="Countries" desc="starting in PH" />
+          </div>
+          <p className="text-center text-xs mt-8 text-white/50">
+            Live metrics will appear after launch
           </p>
         </div>
       </section>
 
       {/* ════════════════ WHO IT'S FOR ════════════════ */}
-      <section className="py-20 dark:!bg-[#10271f]" style={{ background: "white" }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-20 md:py-24 bg-slate-50 dark:bg-[#0D1F18]">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             className="text-center mb-12"
             variants={scrollFade}
             initial="hidden"
             whileInView="show"
             viewport={LANDING_VIEWPORT}>
-            <span className="inline-block px-3 py-1 rounded-full text-xs mb-3"
-              style={{ background: "#E6F4EE", color: "#2F8F6B", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-              For Everyone
-            </span>
-            <h2 className="mb-3 text-[#0F3D2E] dark:text-emerald-50" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "clamp(1.8rem, 3vw, 2.5rem)" }}>
-              However you show up, you belong here
+            <h2 className="mb-3 text-slate-900 dark:text-[#BEEBD7]" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "clamp(1.5rem, 3vw, 2rem)" }}>
+              Built for everyone
             </h2>
-            <p className="max-w-md mx-auto text-[#4b5563] dark:!text-emerald-200/88" style={{ lineHeight: 1.7 }}>
-              SkillSeed is built for every kind of climate participant — from curious beginners to seasoned professionals to leading organizations.
+            <p className="max-w-md mx-auto text-slate-600 dark:text-[#94C8AF]">
+              Whether you're learning, volunteering, or leading projects.
             </p>
           </motion.div>
 
           <motion.div
-            className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6 items-stretch"
+            className="grid grid-cols-1 md:grid-cols-3 gap-4"
             variants={staggerInView}
             initial="hidden"
             whileInView="show"
             viewport={LANDING_VIEWPORT}>
-            {roles.map(({ id, icon: Icon, title, subtitle, desc, cta, bg, border, iconBg, iconColor, emphasis }) => (
-              <motion.div
+            {roles.map(({ id, icon: Icon, title, subtitle, desc, cta, featured }) => (
+              <motion.button
                 key={id}
+                type="button"
                 variants={staggerCard}
-                whileHover={reduceMotion ? undefined : { y: -5 }}
-                whileTap={reduceMotion ? undefined : { scale: 0.99 }}
-                className={`rounded-2xl p-8 pb-10 flex flex-col group transition-shadow duration-300 cursor-pointer ${
-                  emphasis
-                    ? "md:scale-[1.03] md:z-[1] md:shadow-xl md:shadow-black/15 dark:md:shadow-black/40 ring-2 ring-[#2F8F6B]/45 dark:ring-emerald-400/40"
-                    : "dark:!bg-[#152a24] dark:!border-emerald-400/22"
+                whileHover={reduceMotion ? undefined : { y: -3 }}
+                whileTap={reduceMotion ? undefined : { scale: 0.98 }}
+                className={`min-h-[200px] rounded-xl p-6 flex flex-col text-left cursor-pointer transition-all duration-200 bg-white dark:bg-[#132B23] border focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0D1F18] ${
+                  featured
+                    ? "border-[#2F8F6B] ring-1 ring-[#2F8F6B]/30 shadow-md shadow-[#2F8F6B]/10 dark:border-[#6DD4A8] dark:ring-[#6DD4A8]/20"
+                    : "border-slate-200 hover:border-slate-300 dark:border-[#1E3B34] dark:hover:border-[#2F8F6B]/50"
                 }`}
-                style={{ background: bg, border: `1.5px solid ${border}` }}
                 onClick={() => handleRoleClick(id)}>
-                <div className="w-14 h-14 rounded-xl flex items-center justify-center mb-5" style={{ background: iconBg }}>
-                  <Icon className="w-6 h-6" style={{ color: iconColor }} />
+                {/* Icon tile */}
+                <div className={`w-11 h-11 rounded-lg flex items-center justify-center mb-4 ${
+                  featured 
+                    ? "bg-[#0F3D2E] dark:bg-[#2F8F6B]" 
+                    : "bg-slate-100 dark:bg-[#1E3B34]"
+                }`}>
+                  <Icon className={`w-5 h-5 ${featured ? "text-white" : "text-[#0F3D2E] dark:text-[#6DD4A8]"}`} />
                 </div>
-                {emphasis && (
-                  <span
-                    className="text-[10px] uppercase tracking-wider mb-2 px-2.5 py-1 rounded-full w-fit bg-white/15 text-white"
-                    style={{ fontWeight: 700 }}>
-                    New? Start here
-                  </span>
-                )}
-                <span
-                  className={`text-xs mb-2 px-2 py-0.5 rounded-full w-fit font-semibold ${
-                    emphasis ? "" : "dark:!bg-white/12 dark:!text-emerald-200"
-                  }`}
-                  style={{
-                    background: emphasis ? "rgba(255,255,255,0.15)" : "#E6F4EE",
-                    color: emphasis ? "rgba(255,255,255,0.9)" : "#2F8F6B",
-                    fontWeight: 600,
-                  }}>
+                {/* Subtitle pill */}
+                <span className={`inline-flex items-center text-[11px] uppercase tracking-wide font-semibold mb-2 ${
+                  featured 
+                    ? "text-[#2F8F6B] dark:text-[#6DD4A8]" 
+                    : "text-slate-400 dark:text-[#94C8AF]"
+                }`}>
+                  {featured && <span className="w-1.5 h-1.5 rounded-full bg-[#2F8F6B] dark:bg-[#6DD4A8] mr-1.5" />}
                   {subtitle}
                 </span>
-                <h3
-                  className={`mb-2 ${
-                    emphasis
-                      ? "text-white"
-                      : id === "jobready"
-                        ? "text-[#1E3A5F] dark:text-sky-100"
-                        : "text-[#0F3D2E] dark:text-emerald-50"
-                  }`}
-                  style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "1.2rem" }}>
+                {/* Title */}
+                <h3 className="mb-2 text-slate-900 dark:text-[#BEEBD7]" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 700, fontSize: "1.05rem" }}>
                   {title}
                 </h3>
-                <p
-                  className={`text-sm mb-6 flex-1 ${emphasis ? "text-white/85" : "text-[#4b5563] dark:!text-emerald-200/85"}`}
-                  style={{ lineHeight: 1.7 }}>
+                {/* Description */}
+                <p className="text-sm mb-5 flex-1 leading-relaxed text-slate-600 dark:text-[#94C8AF]">
                   {desc}
                 </p>
-                <span
-                  className={`mt-auto pt-2 inline-flex items-center gap-2 text-sm ${
-                    emphasis
-                      ? "text-white"
-                      : id === "jobready"
-                        ? "text-[#1E3A5F] dark:text-sky-100"
-                        : "text-[#0F3D2E] dark:text-emerald-100"
-                  }`}
-                  style={{ fontWeight: 700, fontFamily: "'Manrope', sans-serif" }}>
-                  {cta} <ArrowRight className="w-4 h-4" />
+                {/* CTA */}
+                <span className="mt-auto inline-flex items-center gap-1.5 text-sm font-semibold text-[#0F3D2E] dark:text-[#6DD4A8] group-hover:gap-2 transition-all">
+                  {cta} <ArrowRight className="w-3.5 h-3.5" />
                 </span>
-              </motion.div>
+              </motion.button>
             ))}
           </motion.div>
         </div>
       </section>
 
       {/* ════════════════ FEATURED QUESTS ════════════════ */}
-      <section className="pt-14 pb-20 md:pt-16 dark:!bg-[#10271f]" style={{ background: "#F9FAFB" }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-20 md:py-24 bg-white dark:bg-[#10271f]">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10"
             variants={scrollFade}
@@ -623,61 +581,50 @@ export function LandingPage() {
             whileInView="show"
             viewport={LANDING_VIEWPORT}>
             <div>
-              <span className="inline-block px-3 py-1 rounded-full text-xs mb-3"
-                style={{ background: "#E6F4EE", color: "#2F8F6B", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                Quests
-              </span>
-              <h2 className="text-[#0F3D2E] dark:text-emerald-50" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "clamp(1.6rem, 3vw, 2.2rem)" }}>
-                Start Your Climate Journey
+              <h2 className="text-slate-900 dark:text-emerald-50" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "clamp(1.5rem, 3vw, 2rem)" }}>
+                Featured quests
               </h2>
+              <p className="text-slate-600 dark:text-emerald-200/75 text-sm mt-1">Hands-on climate missions you can start today.</p>
             </div>
             <Link
               to="/hands-on"
-              className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold rounded-lg px-3 py-2 border-2 border-[#2F8F6B]/30 text-[#2F8F6B] hover:bg-[#E6F4EE] dark:border-emerald-400/40 dark:text-emerald-300 dark:hover:bg-white/5 transition-colors">
-              View all quests <ArrowRight className="w-4 h-4" />
+              className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-emerald-300 dark:hover:text-emerald-100 transition-colors">
+              View all <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </motion.div>
 
           {questsLoading ? (
-            <div className="flex justify-center py-16">
-              <Loader2 className="w-8 h-8 animate-spin" style={{ color: "#2F8F6B" }} />
+            <div className="flex justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
             </div>
           ) : displayQuests.length > 0 ? (
             <motion.div
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
               variants={staggerInView}
               initial="hidden"
               whileInView="show"
               viewport={LANDING_VIEWPORT}>
               {displayQuests.map((quest) => {
-                const color = getQuestColor(quest);
                 return (
-                  <motion.div key={quest.id} variants={staggerCard} className="h-full min-h-0" whileHover={reduceMotion ? undefined : { y: -5 }}>
-                  <Link to={`/quests/${quest.id}`} className="group flex flex-col h-full rounded-2xl overflow-hidden transition-all duration-300 border border-gray-200 dark:border-emerald-400/35 bg-white"
-                    style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
-                    onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 8px 28px rgba(15,61,46,0.12)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.04)"; }}>
-                    <div className="relative h-44 shrink-0 overflow-hidden flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${color}15, ${color}35)` }}>
-                      <div className="pointer-events-none absolute inset-0 bg-transparent dark:bg-[#061510]/45 dark:mix-blend-multiply" aria-hidden />
-                      <span className="relative z-[1] text-6xl transition-transform duration-500 group-hover:scale-110 inline-block">{getQuestDisplayIcon(quest)}</span>
-                      <span className="absolute top-3 left-3 z-[2] px-2.5 py-1 rounded-full text-xs"
-                        style={{ background: "rgba(255,255,255,0.92)", color: color, fontWeight: 700 }}>
+                  <motion.div key={quest.id} variants={staggerCard} className="h-full" whileHover={reduceMotion ? undefined : { y: -3 }}>
+                  <Link to={`/quests/${quest.id}`} className="group flex flex-col h-full rounded-xl overflow-hidden border border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm transition-all dark:border-emerald-400/25 dark:bg-[#132B23]">
+                    <div className="relative h-36 shrink-0 overflow-hidden flex items-center justify-center bg-gradient-to-br from-[#E8F5EF] to-[#D1FAE5] dark:from-[#0D1F18] dark:to-[#132B23]">
+                      <div className="transition-transform duration-300 group-hover:scale-110">
+                        {getQuestIcon(quest)}
+                      </div>
+                      <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded text-[10px] font-semibold bg-white text-slate-700 dark:bg-[#0F3D2E] dark:text-emerald-200">
                         {quest.category || quest.tier}
                       </span>
-                      <span className="absolute top-3 right-3 z-[2] px-2.5 py-1 rounded-full text-xs"
-                        style={{ background: "rgba(0,0,0,0.45)", color: "white", fontWeight: 600 }}>
-                        {quest.tier === "beginner" ? "Beginner" : "Advanced"}
-                      </span>
                     </div>
-                    <div className="px-5 pt-4 pb-6 flex flex-col flex-1 min-h-0">
-                      <p className="text-xs mb-1 text-[#9CA3AF] dark:text-emerald-200/75">{quest.tier === "beginner" ? "🌱 Badge Quest" : "🏆 Certificate Quest"}</p>
-                      <h3 className="mb-4 text-[#0F3D2E] dark:text-emerald-50" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 700, fontSize: "0.95rem" }}>{quest.title}</h3>
-                      <div className="flex items-center justify-between pt-4 mt-auto border-t border-[#F3F4F6] dark:border-white/10">
-                        <span className="text-xs flex items-center gap-1 text-[#9CA3AF] dark:text-emerald-200/70">
-                          <Clock className="w-3 h-3" /> ~{quest.estimated_days} days
+                    <div className="px-4 pt-3.5 pb-4 flex flex-col flex-1">
+                      <span className="text-[10px] uppercase tracking-wide text-slate-400 mb-1 font-medium">{quest.tier === "beginner" ? "Badge Quest" : "Certificate Quest"}</span>
+                      <h3 className="mb-3 text-slate-900 dark:text-emerald-50 text-sm font-semibold leading-snug">{quest.title}</h3>
+                      <div className="flex items-center justify-between pt-3 mt-auto border-t border-slate-100 dark:border-white/10 text-xs text-slate-500 dark:text-emerald-200/70">
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> {quest.estimated_days}d
                         </span>
-                        <span className="text-xs flex items-center gap-1" style={{ color: "#FBBF24", fontWeight: 700 }}>
-                          <Zap className="w-3 h-3 fill-current" /> {quest.points_reward} pts
+                        <span className="flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400">
+                          <Zap className="w-3 h-3" /> {quest.points_reward} pts
                         </span>
                       </div>
                     </div>
@@ -687,131 +634,89 @@ export function LandingPage() {
               })}
             </motion.div>
           ) : (
-            <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
-              <p className="text-sm" style={{ color: "#9CA3AF" }}>Quests coming soon — check back shortly!</p>
+            <div className="text-center py-10 bg-slate-50 rounded-xl border border-slate-100">
+              <p className="text-sm text-slate-500">Quests coming soon.</p>
             </div>
           )}
 
-          <div className="text-center mt-8 sm:hidden">
+          <div className="text-center mt-6 sm:hidden">
             <Link
               to="/hands-on"
-              className="inline-flex items-center gap-1.5 text-sm font-semibold rounded-lg px-3 py-2 border-2 border-[#2F8F6B]/30 text-[#2F8F6B] hover:bg-[#E6F4EE] dark:border-emerald-400/40 dark:text-emerald-300 dark:hover:bg-white/5 transition-colors">
-              View all quests <ArrowRight className="w-4 h-4" />
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
+              View all quests <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
         </div>
       </section>
 
-      {/* ════════════════ TESTIMONIALS ════════════════ */}
-      <section className="pt-20 pb-24 md:pb-28 dark:!bg-[#10271f]" style={{ background: "white" }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* ════════════════ PRE-LAUNCH CREDIBILITY ════════════════ */}
+      <section className="py-20 md:py-24 bg-slate-50 dark:bg-[#10271f]">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
-            className="text-center mb-12 md:mb-14"
+            className="text-center mb-10"
             variants={scrollFade}
             initial="hidden"
             whileInView="show"
             viewport={LANDING_VIEWPORT}>
-            <span className="inline-block px-3 py-1 rounded-full text-xs mb-3"
-              style={{ background: "#E6F4EE", color: "#2F8F6B", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-              Community Stories
-            </span>
-            <h2 className="text-[#0F3D2E] dark:text-emerald-50" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "clamp(1.8rem, 3vw, 2.2rem)" }}>
-              What Our Members Say
+            <h2 className="text-slate-900 dark:text-emerald-50" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "clamp(1.5rem, 3vw, 2rem)" }}>
+              Built with early community feedback
             </h2>
+            <p className="text-slate-600 dark:text-emerald-200/75 text-sm mt-2 max-w-md mx-auto">
+              Designed around what real volunteers and learners need.
+            </p>
           </motion.div>
           <motion.div
-            className="grid grid-cols-1 md:grid-cols-3 gap-6"
+            className="grid grid-cols-1 md:grid-cols-3 gap-4"
             variants={staggerInView}
             initial="hidden"
             whileInView="show"
             viewport={LANDING_VIEWPORT}>
-            {testimonials.map((t) => (
+            {credibilityFeatures.map((feature) => (
               <motion.div
-                key={t.name}
+                key={feature.title}
                 variants={staggerCard}
-                whileHover={reduceMotion ? undefined : { y: -4, boxShadow: "0 14px 36px rgba(15,61,46,0.1)" }}
-                className="p-7 rounded-2xl flex flex-col bg-[#F9FAFB] border border-[#F3F4F6] dark:border-emerald-400/25 dark:!bg-[#132b23]"
-                style={{ background: "#F9FAFB" }}>
-                <div className="flex gap-0.5 mb-4">
-                  {Array.from({ length: t.stars }).map((_, i) => (
-                    <Star key={i} className="w-4 h-4" style={{ fill: "#FBBF24", color: "#FBBF24" }} />
-                  ))}
+                whileHover={reduceMotion ? undefined : { y: -3 }}
+                className="p-6 rounded-xl flex flex-col bg-white border border-slate-100 dark:border-emerald-400/20 dark:bg-[#132b23]">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-4 bg-[#E8F5EF] dark:bg-[#1E3B34]">
+                  <feature.icon className="w-5 h-5 text-[#0F3D2E] dark:text-[#6DD4A8]" />
                 </div>
-                <p className="text-sm mb-6 flex-1 text-[#374151] dark:!text-emerald-100/90" style={{ lineHeight: 1.8 }}>"{t.text}"</p>
-                <div className="flex items-center gap-3 pt-5" style={{ borderTop: "1px solid #E5E7EB" }}>
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm text-white"
-                    style={{ background: "linear-gradient(135deg, #0F3D2E, #2F8F6B)", fontWeight: 700 }}>
-                    {t.avatar}
-                  </div>
-                  <div>
-                    <div className="text-sm font-bold text-[#0F3D2E] dark:text-emerald-50">{t.name}</div>
-                    <div className="text-xs text-[#6B7280] dark:text-emerald-200/75">{t.role}</div>
-                  </div>
-                </div>
+                <h3 className="text-base font-semibold text-slate-900 dark:text-emerald-50 mb-2">{feature.title}</h3>
+                <p className="text-sm text-slate-600 dark:text-emerald-100/90 leading-relaxed">{feature.desc}</p>
               </motion.div>
             ))}
           </motion.div>
+          <p className="text-center text-xs text-slate-400 dark:text-emerald-200/50 mt-8">
+            Currently in beta. Stories will appear after launch.
+          </p>
         </div>
       </section>
 
       {/* ════════════════ FINAL CTA ════════════════ */}
-      <section className="py-24 md:py-28 relative overflow-hidden" style={{ background: "#0F3D2E" }}>
-        <div
-          className="absolute inset-0 opacity-10 dark:opacity-[0.28] dark:mix-blend-multiply dark:saturate-75 dark:brightness-90"
-          style={{ backgroundImage: `url(${IMG_COMMUNITY})`, backgroundSize: "cover", backgroundPosition: "center" }}
-        />
-        <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(15,61,46,0.95) 0%, rgba(47,143,107,0.85) 100%)" }} />
-        {!reduceMotion && (
-          <>
-            <motion.div
-              aria-hidden
-              className="pointer-events-none absolute -top-16 -right-10 w-72 h-72 rounded-full blur-3xl opacity-35"
-              style={{ background: "radial-gradient(circle, rgba(167,243,208,0.55) 0%, transparent 68%)" }}
-              animate={{ x: [0, -18, 0], y: [0, 22, 0] }}
-              transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
-            />
-            <motion.div
-              aria-hidden
-              className="pointer-events-none absolute bottom-0 -left-12 w-64 h-64 rounded-full blur-3xl opacity-25"
-              style={{ background: "radial-gradient(circle, rgba(52,211,153,0.4) 0%, transparent 70%)" }}
-              animate={{ x: [0, 20, 0], y: [0, -12, 0] }}
-              transition={{ duration: 11, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-            />
-          </>
-        )}
+      <section className="py-20 md:py-24 bg-[#0F3D2E] relative overflow-hidden">
         <motion.div
-          className="relative z-10 max-w-3xl mx-auto px-4 text-center"
+          className="relative z-10 max-w-2xl mx-auto px-4 text-center"
           variants={staggerWrap}
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, amount: 0.35 }}>
-          <motion.div variants={heroItem} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-6"
-            style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)" }}>
-            <Leaf className="w-3.5 h-3.5 text-green-300" />
-            <span className="text-sm text-white" style={{ fontWeight: 600 }}>Start free · No experience needed</span>
-          </motion.div>
-          <motion.p variants={heroItem} className="text-[10px] sm:text-xs uppercase tracking-[0.18em] text-white/55 mb-3 font-semibold">
-            Mission-based climate learning
-          </motion.p>
-          <motion.h2 variants={heroItem} className="text-white mb-4" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "clamp(1.8rem, 4vw, 2.8rem)", lineHeight: 1.15 }}>
-            Every skill planted grows a better future.
+          <motion.h2 variants={heroItem} className="text-white mb-4" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "clamp(1.5rem, 4vw, 2.25rem)", lineHeight: 1.2 }}>
+            Ready to make an impact?
           </motion.h2>
-          <motion.p variants={heroItem} className="mb-8" style={{ color: "rgba(255,255,255,0.72)", lineHeight: 1.7, fontSize: "1.1rem" }}>
-            Start your first climate mission today — it only takes 10 minutes to get going.
+          <motion.p variants={heroItem} className="mb-8 text-white/70 text-base sm:text-lg">
+            Be among the first to build real climate skills. Start your first mission today.
           </motion.p>
           <motion.div variants={heroItem} className="flex flex-wrap gap-3 justify-center">
-            <motion.div whileHover={reduceMotion ? undefined : { scale: 1.04, y: -2 }} whileTap={reduceMotion ? undefined : { scale: 0.98 }} className="inline-flex">
+            <motion.div whileHover={reduceMotion ? undefined : { y: -1 }} whileTap={reduceMotion ? undefined : { scale: 0.98 }} className="inline-flex">
               <Link to="/auth"
-                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl text-sm font-bold transition-colors bg-white text-[#0F3D2E] hover:bg-emerald-50 shadow-lg shadow-black/20"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold bg-white text-[#0F3D2E] hover:bg-slate-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F3D2E]"
                 style={{ fontFamily: "'Manrope', sans-serif" }}>
-                <Sprout className="w-4 h-4" /> Join for Free
+                <Sprout className="w-4 h-4" /> Get started
               </Link>
             </motion.div>
-            <motion.div whileHover={reduceMotion ? undefined : { y: -2 }} className="inline-flex">
+            <motion.div whileHover={reduceMotion ? undefined : { y: -1 }} className="inline-flex">
               <Link to="/hands-on"
-                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl text-sm text-white transition-colors border-2 border-white/45 bg-transparent hover:bg-white/10"
-                style={{ fontWeight: 600 }}>
-                Browse Quests <ArrowRight className="w-4 h-4" />
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm text-white/90 font-medium border border-white/30 hover:bg-white/10 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50">
+                Browse quests <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </motion.div>
           </motion.div>
