@@ -82,10 +82,17 @@ export function useAuth() {
   };
 
   const signInWithGoogle = async (): Promise<{ error: AuthError | null }> => {
+    // Google blocks OAuth screens inside iframes/webviews ("This content is blocked").
+    // If we detect we're embedded, open auth in a real tab first.
+    if (window.self !== window.top) {
+      window.open(`${window.location.origin}/auth?tab=login`, "_blank", "noopener,noreferrer");
+      return { error: null };
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/dashboard`,
+        redirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
       },
     });
 
