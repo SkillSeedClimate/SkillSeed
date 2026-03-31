@@ -81,11 +81,14 @@ export function useAuth() {
     return { error };
   };
 
-  const signInWithGoogle = async (): Promise<{ error: AuthError | null }> => {
+  const signInWithGoogle = async (redirectTo?: string): Promise<{ error: AuthError | null }> => {
+    const next = redirectTo || '/dashboard';
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/dashboard`,
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        // For embedded contexts (iframes), skip browser redirect to allow popup handling
+        skipBrowserRedirect: window.self !== window.top,
       },
     });
 
