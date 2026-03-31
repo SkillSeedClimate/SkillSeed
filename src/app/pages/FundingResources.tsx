@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, Link } from "react-router";
 import {
   Search,
   ExternalLink,
@@ -17,11 +17,20 @@ import {
   Pencil,
   X,
   SlidersHorizontal,
+  DollarSign,
+  Clock,
+  RefreshCw,
+  Banknote,
+  Users,
+  FileText,
 } from "lucide-react";
 import { supabase } from "../utils/supabase";
 import { PostFundingModal } from "../components/PostFundingModal";
 
+// ============================================================================
 // Types
+// ============================================================================
+
 interface Profile {
   id: string;
   name: string;
@@ -52,9 +61,14 @@ interface FundingOpportunity {
   profiles: Profile | null;
 }
 
+// ============================================================================
+// Constants
+// ============================================================================
+
 const RESOURCE_SECTIONS = [
   {
     title: "Grant Writing Resources",
+    icon: FileText,
     items: [
       "How to Write a Winning Climate Grant Proposal",
       "Logic Model Template for Environmental Projects",
@@ -64,6 +78,7 @@ const RESOURCE_SECTIONS = [
   },
   {
     title: "Legal & Compliance",
+    icon: CheckCircle2,
     items: [
       "NGO Registration Guide (Philippines)",
       "Reporting Requirements for International Grants",
@@ -72,6 +87,7 @@ const RESOURCE_SECTIONS = [
   },
   {
     title: "Impact Measurement",
+    icon: TrendingUp,
     items: [
       "Carbon Footprint Calculation Methodologies",
       "Community Impact Assessment Templates",
@@ -83,7 +99,10 @@ const RESOURCE_SECTIONS = [
 const TYPES = ["All", "Grant", "Fellowship", "In-kind Support", "Partnership"];
 const FOCUS_FILTERS = ["All Focus Areas", "Reforestation", "Marine", "Urban", "Agriculture", "Energy", "Disaster Response"];
 
-// Format amount helper
+// ============================================================================
+// Helpers
+// ============================================================================
+
 const formatAmount = (min: number | null, max: number | null, currency: string) => {
   if (!min && !max) return null;
   const symbol = currency === "PHP" ? "₱" : currency === "EUR" ? "€" : "$";
@@ -92,7 +111,48 @@ const formatAmount = (min: number | null, max: number | null, currency: string) 
   return `${symbol}${min.toLocaleString()} – ${symbol}${max.toLocaleString()}`;
 };
 
-// FundingCard component
+// ============================================================================
+// Skeleton Components
+// ============================================================================
+
+function FundingCardSkeleton() {
+  return (
+    <div className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4 animate-pulse">
+      <div className="flex gap-2 mb-3">
+        <div className="h-4 w-20 bg-slate-100 dark:bg-[#1E3B34] rounded" />
+        <div className="h-4 w-16 bg-slate-100 dark:bg-[#1E3B34] rounded" />
+      </div>
+      <div className="h-5 w-3/4 bg-slate-100 dark:bg-[#1E3B34] rounded mb-2" />
+      <div className="h-4 w-full bg-slate-100 dark:bg-[#1E3B34] rounded mb-3" />
+      <div className="flex gap-3 mb-4">
+        <div className="h-3 w-24 bg-slate-100 dark:bg-[#1E3B34] rounded" />
+        <div className="h-3 w-20 bg-slate-100 dark:bg-[#1E3B34] rounded" />
+      </div>
+      <div className="flex gap-2">
+        <div className="h-9 flex-1 bg-slate-100 dark:bg-[#1E3B34] rounded-lg" />
+        <div className="h-9 w-20 bg-slate-100 dark:bg-[#1E3B34] rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
+function KPIStripSkeleton() {
+  return (
+    <div className="grid grid-cols-3 gap-3">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4 animate-pulse">
+          <div className="h-3 w-16 bg-slate-100 dark:bg-[#1E3B34] rounded mb-2" />
+          <div className="h-7 w-10 bg-slate-100 dark:bg-[#1E3B34] rounded" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ============================================================================
+// FundingCard Component (matches Missions card pattern)
+// ============================================================================
+
 interface FundingCardProps {
   opportunity: FundingOpportunity;
   currentProfileId: string | null;
@@ -113,149 +173,136 @@ function FundingCard({
   const isOwner = currentProfileId && String(opportunity.poster_id) === String(currentProfileId);
   const isVerifiedOrg = opportunity.profiles?.verified && opportunity.profiles?.org_type;
   const isClosingSoon = opportunity.is_closing_soon;
-  const sourceLabel = opportunity.poster_id ? "Community posted" : "Official source";
 
   return (
-    <div
-      className={`bg-white rounded-2xl border p-5 shadow-[0_6px_20px_rgba(15,61,46,0.08)] hover:shadow-[0_14px_28px_rgba(15,61,46,0.12)] transition-all duration-300 ${
-        isClosingSoon ? "border-amber-200" : "border-gray-100"
-      }`}
-    >
-      <div className="flex items-start justify-between gap-4">
-        {/* Left — main info */}
-        <div className="flex-1 min-w-0">
-          {/* Badge row */}
-          <div className="flex items-center gap-2 flex-wrap mb-2">
-            {/* Funder name + verified badge */}
-            <span className="text-xs text-gray-500 font-medium">
-              {opportunity.funder_name ?? opportunity.profiles?.name ?? "Community"}
+    <article className="group bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] overflow-hidden hover:border-[#2F8F6B]/40 dark:hover:border-[#6DD4A8]/40 hover:shadow-md transition-all duration-200">
+      <div className="p-4">
+        {/* Top row: Type chip + Funder + Verified badge */}
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
+          {opportunity.type && (
+            <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-[#1E3B34] text-slate-600 dark:text-[#94C8AF] text-[10px] font-medium">
+              {opportunity.type}
             </span>
-            <span className="bg-gray-50 text-gray-600 text-xs px-2 py-0.5 rounded-full border border-gray-200">
-              {sourceLabel}
-            </span>
+          )}
+          <span className="text-[10px] text-slate-400 dark:text-[#6B8F7F]">by</span>
+          <span className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-[#6B8F7F] truncate">
+            {opportunity.funder_name ?? opportunity.profiles?.name ?? "Community"}
             {isVerifiedOrg && (
-              <span className="flex items-center gap-0.5 bg-green-50 text-green-700 text-xs px-2 py-0.5 rounded-full border border-green-200">
-                <CheckCircle2 className="w-3 h-3" />
-                Verified Org
-              </span>
+              <CheckCircle2 className="w-2.5 h-2.5 text-[#2F8F6B] dark:text-[#6DD4A8]" />
             )}
+          </span>
+          {isClosingSoon && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-[10px] font-medium">
+              <Clock className="w-2.5 h-2.5" />
+              Closing soon
+            </span>
+          )}
+        </div>
 
-            {/* Type badge */}
-            {opportunity.type && (
-              <span className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full">
-                {opportunity.type}
+        {/* Title */}
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-white leading-snug mb-2 line-clamp-2 group-hover:text-[#0F3D2E] dark:group-hover:text-[#6DD4A8] transition-colors">
+          {opportunity.title}
+        </h3>
+
+        {/* Description */}
+        {opportunity.description && (
+          <p className="text-xs text-slate-500 dark:text-[#94C8AF] line-clamp-2 leading-relaxed mb-3">
+            {opportunity.description}
+          </p>
+        )}
+
+        {/* Meta row: Deadline - Amount - Region */}
+        <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-[#6B8F7F] mb-3 flex-wrap">
+          {opportunity.deadline && (
+            <>
+              <Calendar className="w-3 h-3 flex-shrink-0" />
+              <span>
+                {new Date(opportunity.deadline).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                })}
               </span>
-            )}
+              <span className="text-slate-300 dark:text-[#1E3B34]">-</span>
+            </>
+          )}
+          {formatAmount(opportunity.amount_min, opportunity.amount_max, opportunity.currency) && (
+            <>
+              <DollarSign className="w-3 h-3 flex-shrink-0 text-[#2F8F6B] dark:text-[#6DD4A8]" />
+              <span className="text-[#2F8F6B] dark:text-[#6DD4A8] font-medium">
+                {formatAmount(opportunity.amount_min, opportunity.amount_max, opportunity.currency)}
+              </span>
+              <span className="text-slate-300 dark:text-[#1E3B34]">-</span>
+            </>
+          )}
+          {opportunity.region && (
+            <>
+              <Globe className="w-3 h-3 flex-shrink-0" />
+              <span>{opportunity.region}</span>
+            </>
+          )}
+        </div>
 
-            {/* Focus area badges */}
-            {opportunity.focus_areas?.slice(0, 2).map(area => (
+        {/* Focus area tags */}
+        {opportunity.focus_areas && opportunity.focus_areas.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            {opportunity.focus_areas.slice(0, 3).map((area) => (
               <span
                 key={area}
-                className="bg-green-50 text-green-700 text-xs px-2 py-0.5 rounded-full"
+                className="px-2 py-0.5 rounded bg-[#E6F4EE] dark:bg-[#1E3B34] text-[#0F3D2E] dark:text-[#6DD4A8] text-[10px] font-medium"
               >
                 {area}
               </span>
             ))}
-
-            {/* Closing soon badge */}
-            {isClosingSoon && (
-              <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3" />
-                Closing Soon
+            {opportunity.focus_areas.length > 3 && (
+              <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-[#1E3B34] text-slate-500 dark:text-[#94C8AF] text-[10px]">
+                +{opportunity.focus_areas.length - 3}
               </span>
             )}
           </div>
+        )}
 
-          {/* Title */}
-          <h3 className="text-base font-semibold text-gray-900 mb-1">
-            {opportunity.title}
-          </h3>
-
-          {/* Description */}
-          {opportunity.description && (
-            <p className="text-sm text-gray-500 line-clamp-2 mb-3">
-              {opportunity.description}
-            </p>
-          )}
-
-          {/* Eligibility */}
-          {opportunity.eligibility && (
-            <p className="text-sm text-gray-500 mb-3 line-clamp-2">
-              <span className="font-medium text-gray-700">Eligibility: </span>
-              {opportunity.eligibility}
-            </p>
-          )}
-
-          {/* Meta row */}
-          <div className="flex items-center gap-4 text-sm text-gray-500 flex-wrap">
-            {opportunity.deadline && (
-              <span className="flex items-center gap-1">
-                <Calendar className="w-4 h-4" />
-                {new Date(opportunity.deadline).toLocaleDateString("en-PH", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </span>
-            )}
-            {formatAmount(opportunity.amount_min, opportunity.amount_max, opportunity.currency) && (
-              <span className="text-green-700 font-semibold flex items-center gap-1">
-                {formatAmount(opportunity.amount_min, opportunity.amount_max, opportunity.currency)}
-              </span>
-            )}
-            {opportunity.region && (
-              <span className="flex items-center gap-1">
-                <Globe className="w-4 h-4" />
-                {opportunity.region}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Right — actions */}
-        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+        {/* Actions */}
+        <div className="flex gap-2">
           {isOwner ? (
             <button
               onClick={() => onEdit?.(opportunity.id)}
-              className="border border-[#1a3a2a] text-[#1a3a2a] text-sm px-3 py-2 rounded-xl hover:bg-green-50 transition flex items-center gap-1"
+              className="flex-1 min-h-[40px] border border-slate-200 dark:border-[#1E3B34] text-slate-700 dark:text-[#BEEBD7] text-sm font-medium py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-[#1E3B34] transition-colors inline-flex items-center justify-center gap-1.5"
             >
-              <Pencil className="w-3 h-3" />
+              <Pencil className="w-3.5 h-3.5" />
               Edit
             </button>
           ) : (
             <button
               onClick={() => onViewDetails(opportunity)}
-              className="bg-[#1a3a2a] text-white text-sm px-4 py-2 rounded-xl hover:bg-green-900 transition flex items-center gap-1"
+              className="flex-1 min-h-[40px] bg-[#0F3D2E] text-white text-sm font-semibold py-2 rounded-lg hover:bg-[#2F8F6B] transition-colors inline-flex items-center justify-center gap-1.5"
             >
               View Details
-              <ExternalLink className="w-3 h-3" />
+              <ChevronRight className="w-3.5 h-3.5" />
             </button>
           )}
           <button
             onClick={() => onToggleSave(opportunity.id)}
-            className={`flex items-center gap-1 text-sm px-3 py-2 rounded-xl border transition ${
+            className={`min-h-[40px] px-3 py-2 rounded-lg border text-sm font-medium transition-colors inline-flex items-center gap-1.5 ${
               isSaved
-                ? "border-green-600 text-green-600 bg-green-50"
-                : "border-gray-200 text-gray-400 hover:border-gray-300"
+                ? "border-[#2F8F6B] text-[#2F8F6B] bg-[#E6F4EE] dark:border-[#6DD4A8] dark:text-[#6DD4A8] dark:bg-[#1E3B34]"
+                : "border-slate-200 dark:border-[#1E3B34] text-slate-500 dark:text-[#94C8AF] hover:border-[#2F8F6B]/50"
             }`}
           >
             {isSaved ? (
-              <>
-                <BookmarkCheck className="w-3 h-3" />
-                Saved
-              </>
+              <BookmarkCheck className="w-4 h-4" />
             ) : (
-              <>
-                <Bookmark className="w-3 h-3" />
-                Save
-              </>
+              <Bookmark className="w-4 h-4" />
             )}
           </button>
         </div>
       </div>
-    </div>
+    </article>
   );
 }
+
+// ============================================================================
+// Main Component
+// ============================================================================
 
 export function FundingResources() {
   const navigate = useNavigate();
@@ -272,6 +319,7 @@ export function FundingResources() {
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [currentProfile, setCurrentProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Fetch current user profile
@@ -304,6 +352,7 @@ export function FundingResources() {
 
   const fetchOpportunities = async () => {
     setLoading(true);
+    setError(null);
     try {
       let query = supabase
         .from("funding_opportunities_view")
@@ -326,11 +375,12 @@ export function FundingResources() {
         );
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
+      const { data, error: fetchError } = await query;
+      if (fetchError) throw fetchError;
       setOpportunities((data as FundingOpportunity[]) ?? []);
     } catch (err) {
       console.error("Error fetching opportunities:", err);
+      setError("Failed to load funding opportunities. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -409,12 +459,7 @@ export function FundingResources() {
     return aDeadline - bDeadline;
   });
 
-  const activeFilterChips = [
-    search ? `Search: ${search}` : "",
-    typeFilter !== "All" ? typeFilter : "",
-    focusFilter !== "All Focus Areas" ? focusFilter : "",
-    sortBy !== "recommended" ? `Sort: ${sortBy}` : "",
-  ].filter(Boolean);
+  const hasActiveFilters = search !== "" || typeFilter !== "All" || focusFilter !== "All Focus Areas" || sortBy !== "recommended";
 
   const clearAllFilters = () => {
     setSearch("");
@@ -423,26 +468,32 @@ export function FundingResources() {
     setSortBy("recommended");
   };
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // Loading State
+  // ══════════════════════════════════════════════════════════════════════════
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F9FAFB] dark:bg-[#0D1F18]">
-        <div className="bg-gradient-to-br from-[#0F3D2E] to-[#1A5C43] w-full px-8 py-12">
-          <div className="max-w-5xl mx-auto">
-            <div className="h-6 w-40 bg-white/20 rounded animate-pulse mb-3" />
-            <div className="h-10 w-80 bg-white/10 rounded animate-pulse" />
-            <div className="h-5 w-[520px] max-w-full bg-white/10 rounded animate-pulse mt-3" />
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="h-20 bg-white/10 rounded-xl border border-white/10 animate-pulse" />
-              ))}
-            </div>
+      <div className="min-h-screen bg-slate-50 dark:bg-[#0D1F18]">
+        {/* Header skeleton */}
+        <div className="bg-white dark:bg-[#132B23] border-b border-slate-200 dark:border-[#1E3B34]">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="h-4 w-24 bg-slate-100 dark:bg-[#1E3B34] rounded mb-2 animate-pulse" />
+            <div className="h-8 w-56 bg-slate-100 dark:bg-[#1E3B34] rounded mb-3 animate-pulse" />
+            <div className="h-4 w-72 bg-slate-100 dark:bg-[#1E3B34] rounded animate-pulse" />
           </div>
         </div>
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-20">
-          <div className="h-20 bg-white rounded-2xl border border-gray-100 shadow-[0_6px_20px_rgba(15,61,46,0.08)] animate-pulse" />
-          <div className="space-y-3 mt-6">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-44 rounded-2xl bg-white border border-gray-100 animate-pulse" />
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+          <KPIStripSkeleton />
+          <div className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4 animate-pulse">
+            <div className="flex gap-3">
+              <div className="flex-1 h-10 bg-slate-100 dark:bg-[#1E3B34] rounded-lg" />
+              <div className="h-10 w-24 bg-slate-100 dark:bg-[#1E3B34] rounded-lg" />
+              <div className="h-10 w-28 bg-slate-100 dark:bg-[#1E3B34] rounded-lg" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <FundingCardSkeleton key={i} />
             ))}
           </div>
         </div>
@@ -450,81 +501,123 @@ export function FundingResources() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-[#F9FAFB] dark:bg-[#0D1F18]">
-      {/* ── Hero Header — matches Work and Community tabs ── */}
-      <div className="bg-gradient-to-br from-[#0F3D2E] to-[#1A5C43] w-full px-8 py-12 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-80 h-80 rounded-full bg-[#2F8F6B]/10 blur-3xl" />
-        <div className="relative max-w-5xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-          {/* Left — text */}
-          <div>
-            <p className="text-green-300 text-xs font-semibold uppercase tracking-widest mb-2">
-              Funding opportunities
-            </p>
-            <h1
-              className="text-[#BEEBD7] dark:text-[#B7C96A] text-3xl sm:text-4xl font-bold mb-3"
-              style={{ fontFamily: "'Manrope', sans-serif" }}
-            >
-              Fund Your Climate Project
-            </h1>
-            <p className="text-white text-sm max-w-md">
-              Discover grants, fellowships, and partnerships to power your environmental mission.
-            </p>
+  // ══════════════════════════════════════════════════════════════════════════
+  // Error State
+  // ══════════════════════════════════════════════════════════════════════════
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-[#0D1F18] flex items-center justify-center px-4">
+        <div className="text-center max-w-sm">
+          <div className="w-14 h-14 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-7 h-7 text-red-600 dark:text-red-400" />
           </div>
-
-          {/* Right — CTA button */}
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Something went wrong</h2>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">{error}</p>
           <button
-            onClick={handlePostClick}
-            className="flex items-center gap-2 bg-white text-[#1a3a2a] font-semibold text-sm px-5 py-3 rounded-full hover:bg-green-100 transition flex-shrink-0 min-h-10"
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0F3D2E] text-white text-sm font-medium rounded-lg hover:bg-[#1a5241] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] focus-visible:ring-offset-2"
           >
-            <Plus className="w-4 h-4" />
-            Post a Funding Opportunity
+            <RefreshCw className="w-4 h-4" />
+            Try Again
           </button>
         </div>
+      </div>
+    );
+  }
 
-        {/* KPI strip */}
-        <div className="relative max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
-          <div className="bg-white/10 backdrop-blur rounded-xl p-4 border border-white/10">
-            <p className="text-white text-xs uppercase tracking-wide">Opportunities</p>
-            <p className="text-white text-2xl font-bold mt-1">{opportunities.length.toLocaleString()}</p>
-          </div>
-          <div className="bg-white/10 backdrop-blur rounded-xl p-4 border border-white/10">
-            <p className="text-white text-xs uppercase tracking-wide">Closing soon</p>
-            <p className="text-white text-2xl font-bold mt-1">{closingSoonCount.toLocaleString()}</p>
-          </div>
-          <div className="bg-white/10 backdrop-blur rounded-xl p-4 border border-white/10">
-            <p className="text-white text-xs uppercase tracking-wide">Community posted</p>
-            <p className="text-white text-2xl font-bold mt-1">{communityPostedCount.toLocaleString()}</p>
+  // ══════════════════════════════════════════════════════════════════════════
+  // Main Render
+  // ══════════════════════════════════════════════════════════════════════════
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0D1F18]">
+      {/* ─────────────────────────────────────────────────────────────────────
+          Page Header (matches Missions pattern)
+      ───────────────────────────────────────────────────────────────────── */}
+      <header className="bg-white dark:bg-[#132B23] border-b border-slate-200 dark:border-[#1E3B34]">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#2F8F6B] dark:text-[#6DD4A8] mb-1 flex items-center gap-1.5">
+                <Banknote className="w-3.5 h-3.5" />
+                Funding Opportunities
+              </p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white" style={{ fontFamily: "'Manrope', sans-serif" }}>
+                Fund Your Project
+              </h1>
+              <p className="text-sm text-slate-600 dark:text-[#94C8AF] mt-1">
+                Discover grants, fellowships, and partnerships to power your environmental mission.
+              </p>
+            </div>
+            <button
+              onClick={handlePostClick}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-medium rounded-lg border border-slate-200 dark:border-[#1E3B34] bg-white dark:bg-transparent text-slate-700 dark:text-[#BEEBD7] hover:bg-slate-50 dark:hover:bg-[#1E3B34] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4" />
+              Post Opportunity
+            </button>
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-20">
-        {/* Filter Section */}
-        <div className="bg-white rounded-2xl p-4 mb-6 border border-gray-100 shadow-[0_6px_20px_rgba(15,61,46,0.08)]">
-          {/* Search + sort */}
-          <div className="flex flex-col md:flex-row gap-3 mb-4">
-            <div className="flex items-center gap-3 flex-1 px-4 py-3 rounded-xl bg-white border border-gray-200">
-              <Search className="w-4 h-4 shrink-0 text-gray-400" />
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+        {/* ─────────────────────────────────────────────────────────────────────
+            KPI Strip (matches Missions pattern)
+        ───────────────────────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
+            <p className="text-xs text-slate-500 dark:text-[#94C8AF] font-medium mb-1">Total Opportunities</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{opportunities.length}</p>
+          </div>
+          <button
+            onClick={() => setSortBy("closing")}
+            className={`text-left bg-white dark:bg-[#132B23] rounded-xl border p-4 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
+              sortBy === "closing" ? "border-amber-400" : "border-slate-200 dark:border-[#1E3B34] hover:border-amber-300"
+            }`}
+          >
+            <p className="text-xs text-slate-500 dark:text-[#94C8AF] font-medium mb-1 flex items-center gap-1">
+              <Clock className="w-3 h-3 text-amber-500" />
+              Closing Soon
+            </p>
+            <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{closingSoonCount}</p>
+          </button>
+          <div className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
+            <p className="text-xs text-slate-500 dark:text-[#94C8AF] font-medium mb-1 flex items-center gap-1">
+              <Users className="w-3 h-3" />
+              Community Posted
+            </p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{communityPostedCount}</p>
+          </div>
+        </div>
+
+        {/* ─────────────────────────────────────────────────────────────────────
+            Filter Bar (matches Missions pattern)
+        ───────────────────────────────────────────────────────────────────── */}
+        <div className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
+          <div className="flex flex-col md:flex-row gap-3">
+            {/* Search */}
+            <div className="flex-1 relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder="Search grants, funders, focus areas..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="flex-1 bg-transparent outline-none text-sm text-gray-700"
+                className="w-full min-h-[40px] pl-10 pr-4 py-2 border border-slate-200 dark:border-[#1E3B34] bg-white dark:bg-[#0D1F18] rounded-lg text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30 focus:border-[#2F8F6B] transition-all text-slate-900 dark:text-white"
               />
             </div>
+            {/* Filters toggle */}
             <button
               onClick={() => setShowFilters((v) => !v)}
-              className="min-h-10 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 inline-flex items-center gap-2"
+              className="min-h-[40px] px-4 py-2 rounded-lg border border-slate-200 dark:border-[#1E3B34] text-sm font-medium text-slate-700 dark:text-[#BEEBD7] hover:bg-slate-50 dark:hover:bg-[#1E3B34] transition-colors inline-flex items-center gap-2"
             >
               <SlidersHorizontal className="w-4 h-4" />
               Filters
             </button>
+            {/* Sort */}
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as "recommended" | "closing" | "largest" | "newest")}
-              className="min-h-10 px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none"
+              className="min-h-[40px] px-3 py-2 border border-slate-200 dark:border-[#1E3B34] rounded-lg text-sm bg-white dark:bg-[#0D1F18] text-slate-700 dark:text-[#BEEBD7] focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30"
             >
               <option value="recommended">Recommended</option>
               <option value="closing">Closing soon</option>
@@ -533,177 +626,155 @@ export function FundingResources() {
             </select>
           </div>
 
+          {/* Expanded filters */}
           {showFilters && (
-            <>
-          {/* Row 1 — Type filter */}
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-xs text-gray-400 mr-1">Type:</span>
-            {TYPES.map(type => (
-              <button
-                key={type}
-                onClick={() => setTypeFilter(type)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
-                  typeFilter === type
-                    ? "bg-[#1a3a2a] text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-              >
-                {type}
-              </button>
-            ))}
-          </div>
-
-          {/* Row 2 — Focus Area filter */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-gray-400 mr-1">Focus:</span>
-            {FOCUS_FILTERS.map(area => (
-              <button
-                key={area}
-                onClick={() => setFocusFilter(area)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
-                  focusFilter === area
-                    ? "bg-green-600 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-              >
-                {area}
-              </button>
-            ))}
-          </div>
-            </>
-          )}
-
-          {activeFilterChips.length > 0 && (
-            <div className="flex items-center gap-2 mt-3 flex-wrap">
-              {activeFilterChips.map((chip) => (
-                <span key={chip} className="text-xs font-medium px-3 py-1 rounded-full bg-[#E6F4EE] text-[#0F3D2E]">
-                  {chip}
-                </span>
-              ))}
-              <button
-                onClick={clearAllFilters}
-                className="text-xs font-semibold text-[#2F8F6B] hover:text-[#0F3D2E] underline"
-              >
-                Clear all
-              </button>
+            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-[#1E3B34] space-y-3">
+              {/* Type filter chips */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-slate-400 dark:text-[#6B8F7F] mr-1">Type:</span>
+                {TYPES.map(type => (
+                  <button
+                    key={type}
+                    onClick={() => setTypeFilter(type)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                      typeFilter === type
+                        ? "bg-[#0F3D2E] text-white"
+                        : "bg-slate-100 dark:bg-[#1E3B34] text-slate-600 dark:text-[#94C8AF] hover:bg-slate-200 dark:hover:bg-[#2F8F6B]/20"
+                    }`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+              {/* Focus filter chips */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-slate-400 dark:text-[#6B8F7F] mr-1">Focus:</span>
+                {FOCUS_FILTERS.map(area => (
+                  <button
+                    key={area}
+                    onClick={() => setFocusFilter(area)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                      focusFilter === area
+                        ? "bg-[#2F8F6B] text-white"
+                        : "bg-slate-100 dark:bg-[#1E3B34] text-slate-600 dark:text-[#94C8AF] hover:bg-slate-200 dark:hover:bg-[#2F8F6B]/20"
+                    }`}
+                  >
+                    {area}
+                  </button>
+                ))}
+              </div>
+              {/* Clear filters */}
+              {hasActiveFilters && (
+                <button
+                  onClick={clearAllFilters}
+                  className="text-sm font-medium text-[#2F8F6B] dark:text-[#6DD4A8] hover:underline"
+                >
+                  Clear all filters
+                </button>
+              )}
             </div>
           )}
         </div>
 
-        {/* Results Count Bar */}
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm text-gray-600">
-            <span className="font-semibold">{displayedOpportunities.length}</span> opportunities found
-            {closingSoonCount > 0 && (
-              <span className="text-amber-600 ml-2">
-                · {closingSoonCount} closing soon
-              </span>
-            )}
-            <span className="text-gray-400 ml-2">· Community-posted included</span>
+        {/* Results count */}
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-slate-600 dark:text-[#94C8AF]">
+            <span className="font-semibold text-slate-900 dark:text-white">{displayedOpportunities.length}</span> opportunities found
           </p>
         </div>
 
-        {/* Funding List */}
-        <div className="mb-8">
-          {loading ? (
-            <div className="space-y-3">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-44 rounded-2xl bg-white border border-gray-100 animate-pulse" />
-              ))}
+        {/* ─────────────────────────────────────────────────────────────────────
+            Funding Cards Grid
+        ───────────────────────────────────────────────────────────────────── */}
+        {displayedOpportunities.length === 0 ? (
+          <div className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-12 text-center">
+            <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-[#1E3B34] flex items-center justify-center mx-auto mb-4">
+              <TrendingUp className="w-7 h-7 text-slate-400 dark:text-[#6B8F7F]" />
             </div>
-          ) : displayedOpportunities.length === 0 ? (
-            <div
-              className="text-center py-16 rounded-2xl"
-              style={{ background: "white", border: "1px solid #E5E7EB" }}
-            >
-              <TrendingUp className="w-12 h-12 mx-auto mb-3" style={{ color: "#D1D5DB" }} />
-              <p className="text-gray-500 text-sm">No opportunities found. Try different filters.</p>
-              <div className="mt-4 flex justify-center gap-2">
-                <button
-                  onClick={clearAllFilters}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#E6F4EE] text-[#0F3D2E] hover:bg-[#d9efe4]"
-                >
-                  Clear filters
-                </button>
-                <button
-                  onClick={handlePostClick}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#0F3D2E] text-white hover:bg-[#2F8F6B]"
-                >
-                  Post opportunity
-                </button>
-              </div>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No opportunities found</h3>
+            <p className="text-sm text-slate-600 dark:text-[#94C8AF] mb-6">Try adjusting your filters or search terms.</p>
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={clearAllFilters}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-slate-100 dark:bg-[#1E3B34] text-slate-700 dark:text-[#BEEBD7] hover:bg-slate-200 dark:hover:bg-[#2F8F6B]/20 transition-colors"
+              >
+                Clear filters
+              </button>
+              <button
+                onClick={handlePostClick}
+                className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#0F3D2E] text-white hover:bg-[#2F8F6B] transition-colors"
+              >
+                Post opportunity
+              </button>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {displayedOpportunities.map(opportunity => (
-                <FundingCard
-                  key={opportunity.id}
-                  opportunity={opportunity}
-                  currentProfileId={currentProfile?.id ?? null}
-                  isSaved={savedIds.includes(opportunity.id)}
-                  onToggleSave={handleToggleSave}
-                  onViewDetails={setSelectedOpportunity}
-                  onEdit={id => navigate(`/edit-funding/${id}`)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {displayedOpportunities.map(opportunity => (
+              <FundingCard
+                key={opportunity.id}
+                opportunity={opportunity}
+                currentProfileId={currentProfile?.id ?? null}
+                isSaved={savedIds.includes(opportunity.id)}
+                onToggleSave={handleToggleSave}
+                onViewDetails={setSelectedOpportunity}
+                onEdit={id => navigate(`/edit-funding/${id}`)}
+              />
+            ))}
+          </div>
+        )}
 
-        {/* Resource Library */}
-        <div>
+        {/* ─────────────────────────────────────────────────────────────────────
+            Resource Library
+        ───────────────────────────────────────────────────────────────────── */}
+        <div className="pt-6">
           <div className="flex items-center gap-2 mb-4">
-            <Leaf className="w-4 h-4" style={{ color: "#2F8F6B" }} />
-            <h2 style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 700, color: "#0F3D2E" }}>
+            <Leaf className="w-4 h-4 text-[#2F8F6B] dark:text-[#6DD4A8]" />
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white" style={{ fontFamily: "'Manrope', sans-serif" }}>
               Resource Library
             </h2>
           </div>
           <div className="space-y-3">
-            {RESOURCE_SECTIONS.map(section => (
-              <div
-                key={section.title}
-                className="rounded-2xl overflow-hidden"
-                style={{ background: "white", border: "1px solid #E5E7EB" }}
-              >
-                <button
-                  onClick={() => setOpenSection(openSection === section.title ? null : section.title)}
-                  className="w-full px-5 py-4 flex items-center justify-between text-left"
+            {RESOURCE_SECTIONS.map(section => {
+              const SectionIcon = section.icon;
+              return (
+                <div
+                  key={section.title}
+                  className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] overflow-hidden"
                 >
-                  <span
-                    style={{
-                      fontFamily: "'Manrope', sans-serif",
-                      fontWeight: 700,
-                      color: "#0F3D2E",
-                      fontSize: "0.95rem",
-                    }}
+                  <button
+                    onClick={() => setOpenSection(openSection === section.title ? null : section.title)}
+                    className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-slate-50 dark:hover:bg-[#1E3B34] transition-colors"
                   >
-                    {section.title}
-                  </span>
-                  {openSection === section.title ? (
-                    <ChevronDown className="w-4 h-4" style={{ color: "#9CA3AF" }} />
-                  ) : (
-                    <ChevronRight className="w-4 h-4" style={{ color: "#9CA3AF" }} />
+                    <span className="flex items-center gap-2.5">
+                      <SectionIcon className="w-4 h-4 text-[#2F8F6B] dark:text-[#6DD4A8]" />
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white" style={{ fontFamily: "'Manrope', sans-serif" }}>
+                        {section.title}
+                      </span>
+                    </span>
+                    {openSection === section.title ? (
+                      <ChevronDown className="w-4 h-4 text-slate-400 dark:text-[#6B8F7F]" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4 text-slate-400 dark:text-[#6B8F7F]" />
+                    )}
+                  </button>
+                  {openSection === section.title && (
+                    <div className="px-5 pb-4 border-t border-slate-200 dark:border-[#1E3B34] pt-3 space-y-1">
+                      {section.items.map(item => (
+                        <a
+                          key={item}
+                          href="#"
+                          className="flex items-center gap-2 py-2 text-sm text-slate-600 dark:text-[#94C8AF] hover:text-[#2F8F6B] dark:hover:text-[#6DD4A8] transition-colors"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
+                          {item}
+                        </a>
+                      ))}
+                    </div>
                   )}
-                </button>
-                {openSection === section.title && (
-                  <div className="px-5 pb-4 space-y-2" style={{ borderTop: "1px solid #E5E7EB" }}>
-                    {section.items.map(item => (
-                      <a
-                        key={item}
-                        href="#"
-                        className="flex items-center gap-2 py-2.5 text-sm transition-colors"
-                        style={{ color: "#374151" }}
-                        onMouseEnter={e => (e.currentTarget.style.color = "#2F8F6B")}
-                        onMouseLeave={e => (e.currentTarget.style.color = "#374151")}
-                      >
-                        <ExternalLink className="w-3.5 h-3.5 shrink-0" style={{ color: "#9CA3AF" }} />
-                        {item}
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -716,101 +787,115 @@ export function FundingResources() {
         onSuccess={() => fetchOpportunities()}
       />
 
-      {/* Details drawer */}
+      {/* ─────────────────────────────────────────────────────────────────────
+          Details Drawer
+      ───────────────────────────────────────────────────────────────────── */}
       {selectedOpportunity && (
         <div className="fixed inset-0 z-50">
           <div
-            className="absolute inset-0 bg-black/30"
+            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
             onClick={() => setSelectedOpportunity(null)}
             role="button"
             aria-label="Close funding details"
           />
-          <div className="absolute right-0 top-0 h-full w-full sm:w-[520px] bg-white shadow-2xl border-l border-gray-100 overflow-y-auto">
-            <div className="p-5 border-b border-gray-100 flex items-start justify-between gap-3">
+          <div className="absolute right-0 top-0 h-full w-full sm:w-[480px] bg-white dark:bg-[#132B23] shadow-2xl border-l border-slate-200 dark:border-[#1E3B34] overflow-y-auto">
+            {/* Drawer header */}
+            <div className="sticky top-0 bg-white dark:bg-[#132B23] p-5 border-b border-slate-200 dark:border-[#1E3B34] flex items-start justify-between gap-3 z-10">
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Funding details</p>
-                <h2 className="font-[Manrope] font-bold text-[#0F3D2E] text-xl mt-1">{selectedOpportunity.title}</h2>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-xs font-semibold text-[#2F8F6B] dark:text-[#6DD4A8] uppercase tracking-wide mb-1">Funding details</p>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white" style={{ fontFamily: "'Manrope', sans-serif" }}>
+                  {selectedOpportunity.title}
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-[#94C8AF] mt-1">
                   {selectedOpportunity.funder_name ?? selectedOpportunity.profiles?.name ?? "Community"} · {selectedOpportunity.type ?? "Grant"}
                 </p>
               </div>
               <button
                 onClick={() => setSelectedOpportunity(null)}
-                className="px-3 py-1.5 rounded-xl border border-gray-200 text-gray-600 hover:border-gray-300"
+                className="p-2 rounded-lg border border-slate-200 dark:border-[#1E3B34] text-slate-500 dark:text-[#94C8AF] hover:bg-slate-50 dark:hover:bg-[#1E3B34] transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <div className="p-5 space-y-5">
-              <div className="flex flex-wrap gap-2">
-                {selectedOpportunity.focus_areas?.map((area) => (
-                  <span key={area} className="bg-green-50 text-green-700 text-xs px-2 py-0.5 rounded-full">
-                    {area}
-                  </span>
-                ))}
-                {selectedOpportunity.is_closing_soon && (
-                  <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full">Closing soon</span>
-                )}
-              </div>
-
-              {selectedOpportunity.description && (
-                <p className="text-sm text-gray-700 leading-relaxed">{selectedOpportunity.description}</p>
+              {/* Focus area tags */}
+              {selectedOpportunity.focus_areas && selectedOpportunity.focus_areas.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {selectedOpportunity.focus_areas.map((area) => (
+                    <span key={area} className="px-2.5 py-1 rounded bg-[#E6F4EE] dark:bg-[#1E3B34] text-[#0F3D2E] dark:text-[#6DD4A8] text-xs font-medium">
+                      {area}
+                    </span>
+                  ))}
+                  {selectedOpportunity.is_closing_soon && (
+                    <span className="px-2.5 py-1 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-xs font-medium">
+                      Closing soon
+                    </span>
+                  )}
+                </div>
               )}
 
+              {/* Description */}
+              {selectedOpportunity.description && (
+                <p className="text-sm text-slate-700 dark:text-[#BEEBD7] leading-relaxed">{selectedOpportunity.description}</p>
+              )}
+
+              {/* Stats grid */}
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-[#F9FDFB] border border-gray-100 rounded-2xl p-3">
-                  <p className="text-xs text-gray-500">Deadline</p>
-                  <p className="text-sm font-bold text-[#0F3D2E] mt-0.5">
+                <div className="bg-slate-50 dark:bg-[#0D1F18] rounded-lg p-3 text-center">
+                  <p className="text-xs text-slate-400 dark:text-[#6B8F7F]">Deadline</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">
                     {selectedOpportunity.deadline
-                      ? new Date(selectedOpportunity.deadline).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })
+                      ? new Date(selectedOpportunity.deadline).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
                       : "Open"}
                   </p>
                 </div>
-                <div className="bg-[#F9FDFB] border border-gray-100 rounded-2xl p-3">
-                  <p className="text-xs text-gray-500">Amount</p>
-                  <p className="text-sm font-bold text-[#2F8F6B] mt-0.5">
-                    {formatAmount(selectedOpportunity.amount_min, selectedOpportunity.amount_max, selectedOpportunity.currency) ?? "Not specified"}
+                <div className="bg-slate-50 dark:bg-[#0D1F18] rounded-lg p-3 text-center">
+                  <p className="text-xs text-slate-400 dark:text-[#6B8F7F]">Amount</p>
+                  <p className="text-sm font-bold text-[#2F8F6B] dark:text-[#6DD4A8] mt-0.5">
+                    {formatAmount(selectedOpportunity.amount_min, selectedOpportunity.amount_max, selectedOpportunity.currency) ?? "N/A"}
                   </p>
                 </div>
-                <div className="bg-[#F9FDFB] border border-gray-100 rounded-2xl p-3">
-                  <p className="text-xs text-gray-500">Region</p>
-                  <p className="text-sm font-bold text-[#0F3D2E] mt-0.5">{selectedOpportunity.region ?? "Global"}</p>
+                <div className="bg-slate-50 dark:bg-[#0D1F18] rounded-lg p-3 text-center">
+                  <p className="text-xs text-slate-400 dark:text-[#6B8F7F]">Region</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">{selectedOpportunity.region ?? "Global"}</p>
                 </div>
               </div>
 
+              {/* Eligibility */}
               {selectedOpportunity.eligibility && (
-                <div className="bg-white border border-gray-100 rounded-2xl p-4">
-                  <p className="text-sm font-semibold text-[#0F3D2E]">Eligibility</p>
-                  <p className="text-sm text-gray-600 mt-1">{selectedOpportunity.eligibility}</p>
+                <div className="bg-slate-50 dark:bg-[#0D1F18] rounded-lg p-4">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white mb-1">Eligibility</p>
+                  <p className="text-sm text-slate-600 dark:text-[#94C8AF]">{selectedOpportunity.eligibility}</p>
                 </div>
               )}
 
+              {/* Actions */}
               <div className="flex gap-2">
                 {selectedOpportunity.apply_url ? (
                   <a
                     href={selectedOpportunity.apply_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 py-2 rounded-xl text-sm font-semibold bg-[#0F3D2E] text-white hover:bg-[#2F8F6B] transition-colors text-center inline-flex items-center justify-center gap-1.5"
+                    className="flex-1 min-h-[44px] py-2.5 rounded-lg text-sm font-semibold bg-[#0F3D2E] text-white hover:bg-[#2F8F6B] transition-colors text-center inline-flex items-center justify-center gap-1.5"
                   >
-                    Visit application link <ExternalLink className="w-4 h-4" />
+                    Apply Now <ExternalLink className="w-4 h-4" />
                   </a>
                 ) : (
                   <button
                     type="button"
                     disabled
-                    className="flex-1 py-2 rounded-xl text-sm font-semibold bg-gray-100 text-gray-400 cursor-not-allowed"
+                    className="flex-1 min-h-[44px] py-2.5 rounded-lg text-sm font-semibold bg-slate-100 dark:bg-[#1E3B34] text-slate-400 dark:text-[#6B8F7F] cursor-not-allowed"
                   >
                     No application link
                   </button>
                 )}
                 <button
                   onClick={() => handleToggleSave(selectedOpportunity.id)}
-                  className={`px-4 py-2 rounded-xl border text-sm font-medium ${
+                  className={`min-h-[44px] px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
                     savedIds.includes(selectedOpportunity.id)
-                      ? "border-green-600 text-green-600 bg-green-50"
-                      : "border-gray-200 text-gray-600 hover:border-gray-300"
+                      ? "border-[#2F8F6B] text-[#2F8F6B] bg-[#E6F4EE] dark:border-[#6DD4A8] dark:text-[#6DD4A8] dark:bg-[#1E3B34]"
+                      : "border-slate-200 dark:border-[#1E3B34] text-slate-600 dark:text-[#94C8AF] hover:border-[#2F8F6B]/50"
                   }`}
                 >
                   {savedIds.includes(selectedOpportunity.id) ? "Saved" : "Save"}
@@ -823,3 +908,5 @@ export function FundingResources() {
     </div>
   );
 }
+
+export default FundingResources;
