@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import {
   Trophy,
   Users,
@@ -689,7 +689,7 @@ export function CommunityChallenges() {
               </>
             )}
 
-            {/* ══════════════════════════════════════════════════════════════════════════════
+            {/* ══════════���═══════════════════════════════════════════════════════════════════
                 CHALLENGE LIST
             ══════════════════════════════════════════════════════════════════════════════ */}
             {activeTab === "feed" ? (
