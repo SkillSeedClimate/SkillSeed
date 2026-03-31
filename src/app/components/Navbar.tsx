@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
-import { Menu, X, Sprout, ChevronDown, User, LogOut, Moon, Sun, Monitor } from "lucide-react";
+import { Menu, X, Sprout, ChevronDown, User, LogOut, Moon, Sun, Monitor, Leaf, Globe } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useTheme } from "next-themes";
+import { ThemeToggle } from "./ThemeToggle";
 
 const navLinks = [
   { label: "Missions",     href: "/browse",    comingSoon: false },
@@ -105,22 +106,7 @@ export function Navbar() {
 
           {/* ── Right Side (desktop) ── */}
           <div className="hidden md:flex items-center gap-2">
-            {mounted && (
-              <button
-                onClick={() => {
-                  document.documentElement.classList.add('theme-transitioning');
-                  setTheme(resolvedTheme === "dark" ? "light" : "dark");
-                  setTimeout(() => {
-                    document.documentElement.classList.remove('theme-transitioning');
-                  }, 400);
-                }}
-                className="min-h-[40px] min-w-[40px] p-2 rounded-lg border border-border dark:border-[#1E3B34] bg-white dark:bg-[#132B23] text-[#0F3D2E] dark:text-[#BEEBD7] hover:bg-muted dark:hover:bg-[#17342B] transition-colors"
-                title={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-              >
-                {resolvedTheme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              </button>
-            )}
+            {mounted && <ThemeToggle />}
             {user ? (
               /* ── LOGGED IN ── */
               <>
@@ -193,8 +179,8 @@ export function Navbar() {
                         </p>
                         <div className="grid grid-cols-3 gap-2">
                           {[
-                            { id: "light", label: "Light", icon: Sun },
-                            { id: "dark", label: "Dark", icon: Moon },
+                            { id: "light", label: "Light", icon: Leaf },
+                            { id: "dark", label: "Dark", icon: Globe },
                             { id: "system", label: "System", icon: Monitor },
                           ].map(({ id, label, icon: Icon }) => {
                             const active = (theme ?? "system") === id;
@@ -255,27 +241,7 @@ export function Navbar() {
 
           {/* ── Mobile controls ── */}
           <div className="md:hidden flex items-center gap-1">
-            {mounted && (
-              <button
-                onClick={() => {
-                  document.documentElement.classList.add('theme-transitioning');
-                  setTheme(resolvedTheme === "dark" ? "light" : "dark");
-                  setTimeout(() => {
-                    document.documentElement.classList.remove('theme-transitioning');
-                  }, 400);
-                }}
-                className="p-2 rounded-lg border transition-colors"
-                style={{
-                  borderColor: mounted && theme === "dark" ? "#1E3B34" : "#E5E7EB",
-                  background: mounted && theme === "dark" ? "#132B23" : "white",
-                  color: mounted && theme === "dark" ? "#E8F5EF" : "#0F3D2E",
-                }}
-                title={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-              >
-                {resolvedTheme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              </button>
-            )}
+            {mounted && <ThemeToggle />}
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
               className="p-2 rounded-lg dark:!text-emerald-200"
@@ -315,12 +281,12 @@ export function Navbar() {
 
           <div className="pt-3 flex flex-col gap-2 border-t border-gray-100 dark:border-[#1E3B34] mt-2">
             <div className="flex items-center justify-between px-1 pb-1">
-              <span className="text-xs text-gray-500">Theme</span>
+              <span className="text-xs text-gray-500 dark:text-[#94C8AF]">Theme</span>
               <div className="flex items-center gap-1">
                 {[
-                  { id: "light", icon: Sun },
-                  { id: "dark", icon: Moon },
-                  { id: "system", icon: Monitor },
+                  { id: "light", icon: Leaf, label: "Light" },
+                  { id: "dark", icon: Globe, label: "Dark" },
+                  { id: "system", icon: Monitor, label: "System" },
                 ].map(({ id, icon: Icon }) => {
                   const active = (theme ?? "system") === id;
                   return (

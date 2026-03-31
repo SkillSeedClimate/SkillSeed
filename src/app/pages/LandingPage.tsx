@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router";
 import { motion, useReducedMotion } from "motion/react";
 import {
@@ -9,13 +9,17 @@ import {
   Zap,
   Wrench,
   Building2,
-  Star,
   Globe,
   Clock,
   TrendingUp,
   Heart,
   Eye,
   Loader2,
+  TreePine,
+  Recycle,
+  CheckCircle,
+  Target,
+  FileCheck,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { fetchAllQuests } from "../utils/questService";
@@ -74,62 +78,50 @@ function FloatingSeeds({ reduced }: { reduced: boolean }) {
   );
 }
 
-function useCounter(target: number, duration = 2000, trigger = false) {
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    if (!trigger) return;
-    let start = 0;
-    const increment = target / (duration / 16);
-    const timer = setInterval(() => {
-      start += increment;
-      if (start >= target) { setCount(target); clearInterval(timer); }
-      else setCount(Math.floor(start));
-    }, 16);
-    return () => clearInterval(timer);
-  }, [trigger, target, duration]);
-  return count;
-}
-
-function AnimatedStat({ value, suffix, label, desc, recencyLabel = "Updated monthly" }: { value: number; suffix: string; label: string; desc?: string; recencyLabel?: string }) {
-  const [triggered, setTriggered] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const count = useCounter(value, 2000, triggered);
-  useEffect(() => {
-    const observer = new IntersectionObserver(([e]) => { if (e.isIntersecting) setTriggered(true); }, { threshold: 0.5 });
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, []);
+function PreLaunchStat({ label, desc }: { label: string; desc?: string }) {
   return (
-    <div ref={ref} className="text-center">
+    <div className="text-center">
       <div className="text-4xl sm:text-5xl mb-1" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, color: "white" }}>
-        {count.toLocaleString()}{suffix}
+        —
       </div>
       <div className="text-sm" style={{ color: "rgba(255,255,255,0.9)", fontWeight: 600 }}>{label}</div>
       {desc && <div className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.68)" }}>{desc}</div>}
-      {recencyLabel && (
-        <div className="text-[10px] mt-2 leading-tight" style={{ color: "rgba(255,255,255,0.55)" }}>{recencyLabel}</div>
-      )}
     </div>
   );
 }
 
-/** Visual variety when API returns the same badge for every quest */
-function getQuestDisplayIcon(quest: Quest): string {
-  if (quest.badge_icon && quest.badge_icon !== "🏆") return quest.badge_icon;
+/** Get lucide icon component based on quest category */
+function getQuestIcon(quest: Quest): React.ReactNode {
   const c = quest.category?.toLowerCase() ?? "";
-  if (c.includes("community") || c.includes("barangay")) return "��";
-  if (c.includes("circular") || c.includes("repair")) return "🔧";
-  if (c.includes("waste") || c.includes("compost") || c.includes("zero")) return "♻️";
-  if (c.includes("energy")) return "⚡";
-  if (c.includes("water")) return "💧";
-  if (c.includes("tree") || c.includes("forest")) return "🌳";
-  return quest.badge_icon || "🌿";
+  const iconClass = "w-10 h-10 text-[#2F8F6B] dark:text-[#6DD4A8]";
+  
+  if (c.includes("community") || c.includes("barangay")) return <Users className={iconClass} />;
+  if (c.includes("circular") || c.includes("repair")) return <Wrench className={iconClass} />;
+  if (c.includes("waste") || c.includes("compost") || c.includes("zero")) return <Recycle className={iconClass} />;
+  if (c.includes("energy")) return <Zap className={iconClass} />;
+  if (c.includes("water")) return <Globe className={iconClass} />;
+  if (c.includes("tree") || c.includes("forest") || c.includes("nature")) return <TreePine className={iconClass} />;
+  // Default fallback
+  return <Leaf className={iconClass} />;
 }
 
-const testimonials = [
-  { name: "Maria Santos", role: "Urban Gardener · Quezon City", text: "SkillSeed helped me turn my rooftop into a productive food garden. The composting mission changed everything — I now teach my neighbors!", avatar: "MS", stars: 5 },
-  { name: "James Reyes", role: "Solar Installer · Manila", text: "I completed the energy-saving missions and landed a job with a solar NGO. The hands-on format is incredible for real learning.", avatar: "JR", stars: 5 },
-  { name: "Lena Cruz", role: "Community Organizer · Cebu", text: "Our barangay is running 3 repair cafés after learning through SkillSeed. The community challenges keep everyone motivated.", avatar: "LC", stars: 5 },
+// Pre-launch credibility features (no fake testimonials)
+const credibilityFeatures = [
+  { 
+    icon: Target, 
+    title: "Real-world missions", 
+    desc: "Short, practical activities you can complete locally." 
+  },
+  { 
+    icon: CheckCircle, 
+    title: "Volunteer-ready", 
+    desc: "Clear requirements, time estimates, and next steps." 
+  },
+  { 
+    icon: FileCheck, 
+    title: "Proof of impact", 
+    desc: "Track what you did and build a shareable record." 
+  },
 ];
 
 export function LandingPage() {
@@ -325,26 +317,15 @@ export function LandingPage() {
             </motion.div>
           </motion.div>
 
-          {/* Social proof - compact trust indicators */}
-          <motion.div variants={heroItem} className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-slate-500">
-            <div className="flex items-center gap-2">
-              <div className="flex -space-x-1.5">
-                {["MS", "JR", "LC", "AB"].map((i, idx) => (
-                  <div
-                    key={idx}
-                    className="w-7 h-7 rounded-full border-2 border-white flex items-center justify-center text-[10px] text-white font-semibold"
-                    style={{ background: ["#2F8F6B", "#059669", "#0F3D2E", "#34D399"][idx] }}>
-                    {i}
-                  </div>
-                ))}
-              </div>
-              <span><strong className="text-slate-700">12k+</strong> members</span>
-            </div>
-            <span className="hidden sm:inline text-slate-300">|</span>
-            <span className="flex items-center gap-1.5">
-              <Globe className="w-3.5 h-3.5" /> 87 countries
+          {/* Social proof - honest pre-launch indicators */}
+          <motion.div variants={heroItem} className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm text-slate-500 dark:text-[#94C8AF]">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#E8F5EF] dark:bg-[#1E3B34] text-[#0F3D2E] dark:text-[#6DD4A8] text-xs font-medium">
+              <Leaf className="w-3 h-3" /> Beta
             </span>
-            <span className="hidden sm:inline text-slate-300">|</span>
+            <span className="flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5" /> Starting in Philippines
+            </span>
+            <span className="hidden sm:inline text-slate-300 dark:text-[#1E3B34]">|</span>
             <span>Free to join</span>
           </motion.div>
         </motion.div>
@@ -488,7 +469,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ════════════════ STATS ════════════════ */}
+      {/* ════════════════ STATS (Pre-launch) ════════════════ */}
       <section className="py-16 md:py-20 relative overflow-hidden bg-[#0F3D2E]">
         {!reduceMotion && (
           <motion.div
@@ -502,13 +483,19 @@ export function LandingPage() {
           />
         )}
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-[1]">
+          {/* Pre-launch label */}
+          <div className="text-center mb-6">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-white/80 text-xs font-medium">
+              <Leaf className="w-3 h-3" /> Pre-launch
+            </span>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
-            <AnimatedStat value={12840} suffix="+" label="Active Members" desc="across 87 countries" />
-            <AnimatedStat value={1240} suffix="+" label="Missions Completed" desc="verified impact" />
-            <AnimatedStat value={87} suffix="" label="Countries Reached" desc="and growing" />
+            <PreLaunchStat label="Members" desc="launching soon" />
+            <PreLaunchStat label="Missions" desc="ready to go" />
+            <PreLaunchStat label="Countries" desc="starting in PH" />
           </div>
           <p className="text-center text-xs mt-8 text-white/50">
-            Figures updated monthly
+            Live metrics will appear after launch
           </p>
         </div>
       </section>
@@ -621,8 +608,10 @@ export function LandingPage() {
                 return (
                   <motion.div key={quest.id} variants={staggerCard} className="h-full" whileHover={reduceMotion ? undefined : { y: -3 }}>
                   <Link to={`/quests/${quest.id}`} className="group flex flex-col h-full rounded-xl overflow-hidden border border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm transition-all dark:border-emerald-400/25 dark:bg-[#132B23]">
-                    <div className="relative h-36 shrink-0 overflow-hidden flex items-center justify-center bg-slate-100 dark:bg-[#0D1F18]">
-                      <span className="text-5xl transition-transform duration-300 group-hover:scale-110">{getQuestDisplayIcon(quest)}</span>
+                    <div className="relative h-36 shrink-0 overflow-hidden flex items-center justify-center bg-gradient-to-br from-[#E8F5EF] to-[#D1FAE5] dark:from-[#0D1F18] dark:to-[#132B23]">
+                      <div className="transition-transform duration-300 group-hover:scale-110">
+                        {getQuestIcon(quest)}
+                      </div>
                       <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded text-[10px] font-semibold bg-white text-slate-700 dark:bg-[#0F3D2E] dark:text-emerald-200">
                         {quest.category || quest.tier}
                       </span>
@@ -660,7 +649,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ════════════════ TESTIMONIALS ════════════════ */}
+      {/* ════════════════ PRE-LAUNCH CREDIBILITY ════════════════ */}
       <section className="py-20 md:py-24 bg-slate-50 dark:bg-[#10271f]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
@@ -670,8 +659,11 @@ export function LandingPage() {
             whileInView="show"
             viewport={LANDING_VIEWPORT}>
             <h2 className="text-slate-900 dark:text-emerald-50" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, fontSize: "clamp(1.5rem, 3vw, 2rem)" }}>
-              What members say
+              Built with early community feedback
             </h2>
+            <p className="text-slate-600 dark:text-emerald-200/75 text-sm mt-2 max-w-md mx-auto">
+              Designed around what real volunteers and learners need.
+            </p>
           </motion.div>
           <motion.div
             className="grid grid-cols-1 md:grid-cols-3 gap-4"
@@ -679,30 +671,23 @@ export function LandingPage() {
             initial="hidden"
             whileInView="show"
             viewport={LANDING_VIEWPORT}>
-            {testimonials.map((t) => (
+            {credibilityFeatures.map((feature) => (
               <motion.div
-                key={t.name}
+                key={feature.title}
                 variants={staggerCard}
                 whileHover={reduceMotion ? undefined : { y: -3 }}
-                className="p-5 rounded-xl flex flex-col bg-white border border-slate-100 dark:border-emerald-400/20 dark:bg-[#132b23]">
-                <div className="flex gap-0.5 mb-3">
-                  {Array.from({ length: t.stars }).map((_, i) => (
-                    <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                  ))}
+                className="p-6 rounded-xl flex flex-col bg-white border border-slate-100 dark:border-emerald-400/20 dark:bg-[#132b23]">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-4 bg-[#E8F5EF] dark:bg-[#1E3B34]">
+                  <feature.icon className="w-5 h-5 text-[#0F3D2E] dark:text-[#6DD4A8]" />
                 </div>
-                <p className="text-sm mb-5 flex-1 text-slate-600 dark:text-emerald-100/90 leading-relaxed">"{t.text}"</p>
-                <div className="flex items-center gap-3 pt-4 border-t border-slate-100 dark:border-white/10">
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs text-white font-semibold bg-[#0F3D2E]">
-                    {t.avatar}
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-slate-900 dark:text-emerald-50">{t.name}</div>
-                    <div className="text-xs text-slate-500 dark:text-emerald-200/70">{t.role}</div>
-                  </div>
-                </div>
+                <h3 className="text-base font-semibold text-slate-900 dark:text-emerald-50 mb-2">{feature.title}</h3>
+                <p className="text-sm text-slate-600 dark:text-emerald-100/90 leading-relaxed">{feature.desc}</p>
               </motion.div>
             ))}
           </motion.div>
+          <p className="text-center text-xs text-slate-400 dark:text-emerald-200/50 mt-8">
+            Currently in beta. Stories will appear after launch.
+          </p>
         </div>
       </section>
 
@@ -718,19 +703,19 @@ export function LandingPage() {
             Ready to make an impact?
           </motion.h2>
           <motion.p variants={heroItem} className="mb-8 text-white/70 text-base sm:text-lg">
-            Join thousands building real climate skills. Start your first mission today.
+            Be among the first to build real climate skills. Start your first mission today.
           </motion.p>
           <motion.div variants={heroItem} className="flex flex-wrap gap-3 justify-center">
             <motion.div whileHover={reduceMotion ? undefined : { y: -1 }} whileTap={reduceMotion ? undefined : { scale: 0.98 }} className="inline-flex">
               <Link to="/auth"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold bg-white text-[#0F3D2E] hover:bg-slate-100 transition-colors"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold bg-white text-[#0F3D2E] hover:bg-slate-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F3D2E]"
                 style={{ fontFamily: "'Manrope', sans-serif" }}>
-                <Sprout className="w-4 h-4" /> Get started free
+                <Sprout className="w-4 h-4" /> Get started
               </Link>
             </motion.div>
             <motion.div whileHover={reduceMotion ? undefined : { y: -1 }} className="inline-flex">
               <Link to="/hands-on"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm text-white/90 font-medium border border-white/30 hover:bg-white/10 transition-colors">
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm text-white/90 font-medium border border-white/30 hover:bg-white/10 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50">
                 Browse quests <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </motion.div>
