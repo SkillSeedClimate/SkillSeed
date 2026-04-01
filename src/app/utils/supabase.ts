@@ -1,76 +1,51 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
-// Check if environment variables are configured
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
-// Create client only if configured, otherwise create a dummy that will show config error
-let supabaseInstance: SupabaseClient;
+// Important: do not throw on missing env vars. We want the app to render a friendly
+// configuration error (demo-safe) instead of crashing at import time.
+const clientUrl = isSupabaseConfigured ? (supabaseUrl as string) : "http://localhost:54321";
+const clientKey = isSupabaseConfigured ? (supabaseAnonKey as string) : "invalid-anon-key";
 
-if (isSupabaseConfigured) {
-  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
-} else {
-  // Create a minimal placeholder - actual usage will check isSupabaseConfigured first
-  supabaseInstance = null as unknown as SupabaseClient;
-}
+export const supabase = createClient(clientUrl, clientKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+});
 
-export const supabase = supabaseInstance;
+export type SafeQueryResult<T> = {
+  data: T | null;
+  error: unknown | null;
+  userMessage: string | null;
+};
 
-// Helper to wrap queries with user-friendly error handling
-export async function safeQuery<T>(
-  queryFn: () => Promise<{ data: T | null; error: { message: string; code?: string } | null }>,
-  options?: {
-    onAuthError?: () => void;
-    onPermissionError?: () => void;
-  }
-): Promise<{ data: T | null; error: string | null; isAuthError: boolean; isPermissionError: boolean }> {
+export async function safeQuery<T>(fn: () => Promise<T>): Promise<SafeQueryResult<T>> {
   if (!isSupabaseConfigured) {
     return {
       data: null,
-      error: 'Database not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment.',
-      isAuthError: false,
-      isPermissionError: false,
+      error: new Error("Supabase is not configured"),
+      userMessage:
+        "Supabase isn’t configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, then reload.",
     };
   }
 
   try {
-    const { data, error } = await queryFn();
-    
-    if (error) {
-      const isAuthError = error.code === '401' || error.message?.toLowerCase().includes('not authenticated');
-      const isPermissionError = error.code === '403' || error.code === '42501' || error.message?.toLowerCase().includes('permission denied');
-      
-      if (isAuthError && options?.onAuthError) {
-        options.onAuthError();
-      }
-      if (isPermissionError && options?.onPermissionError) {
-        options.onPermissionError();
-      }
-      
-      return {
-        data: null,
-        error: isAuthError 
-          ? 'Please sign in to continue.' 
-          : isPermissionError 
-            ? 'You do not have permission to access this resource.'
-            : error.message,
-        isAuthError,
-        isPermissionError,
-      };
-    }
-    
-    return { data, error: null, isAuthError: false, isPermissionError: false };
-  } catch (err) {
-    return {
-      data: null,
-      error: err instanceof Error ? err.message : 'An unexpected error occurred.',
-      isAuthError: false,
-      isPermissionError: false,
-    };
+    const data = await fn();
+    return { data, error: null, userMessage: null };
+  } catch (error) {
+    const message = typeof error === "object" && error && "message" in error ? String((error as any).message) : "";
+    const lower = message.toLowerCase();
+    const userMessage =
+      lower.includes("permission") || lower.includes("rls") || lower.includes("not allowed") || lower.includes("unauthorized")
+        ? "You don’t have permission to do that. Try signing in again."
+        : message || "Something went wrong. Please try again.";
+    return { data: null, error, userMessage };
   }
 }
 
 export default supabase;
-        
