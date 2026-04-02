@@ -141,13 +141,13 @@ export function SubmissionModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg bg-white border-gray-200 text-gray-900">
+      <DialogContent className="max-w-lg bg-white dark:bg-[#132B23] border-slate-200 dark:border-[#1E3B34] text-slate-900 dark:text-white">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl text-[#0F3D2E]">
-            <CheckCircle className="h-5 w-5 text-[#2F8F6B]" />
+          <DialogTitle className="flex items-center gap-2 text-xl text-[#0F3D2E] dark:text-white">
+            <CheckCircle className="h-5 w-5 text-[#2F8F6B] dark:text-[#6DD4A8]" />
             Complete Challenge
           </DialogTitle>
-          <DialogDescription className="text-gray-600">
+          <DialogDescription className="text-slate-600 dark:text-[#94C8AF]">
             Submit proof of completing "{challenge.title}" to earn{" "}
             <span className="text-[#2F8F6B] font-semibold">
               {challenge.points_reward} points
@@ -158,14 +158,14 @@ export function SubmissionModal({
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           {/* Photo Upload Section */}
           <div className="space-y-2">
-            <Label className="text-gray-700">
+            <Label className="text-slate-700 dark:text-[#BEEBD7]">
               Photo Proof <span className="text-red-500">*</span>
             </Label>
             
             {!photoPreview ? (
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-[#2F8F6B] hover:bg-[#E6F4EE] transition-colors"
+                className="border-2 border-dashed border-slate-300 dark:border-[#1E3B34] rounded-lg p-8 text-center cursor-pointer bg-white/60 dark:bg-[#0D1F18] hover:border-[#2F8F6B] dark:hover:border-[#6DD4A8]/60 hover:bg-[#E6F4EE] dark:hover:bg-[#0F2C22] transition-colors"
               >
                 <input
                   ref={fileInputRef}
@@ -175,14 +175,14 @@ export function SubmissionModal({
                   className="hidden"
                 />
                 <div className="flex flex-col items-center gap-3">
-                  <div className="p-3 bg-[#E6F4EE] rounded-full">
-                    <Camera className="h-6 w-6 text-[#2F8F6B]" />
+                  <div className="p-3 bg-[#E6F4EE] dark:bg-[#1E3B34] rounded-full">
+                    <Camera className="h-6 w-6 text-[#2F8F6B] dark:text-[#6DD4A8]" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-700">
+                    <p className="text-sm font-medium text-slate-700 dark:text-[#BEEBD7]">
                       Click to upload your proof photo
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-slate-500 dark:text-[#6B8F7F] mt-1">
                       PNG, JPG, or WEBP (max 5MB)
                     </p>
                   </div>
@@ -208,7 +208,7 @@ export function SubmissionModal({
 
           {/* Reflection */}
           <div className="space-y-2">
-            <Label htmlFor="reflection" className="text-gray-700">
+            <Label htmlFor="reflection" className="text-slate-700 dark:text-[#BEEBD7]">
               Reflection (optional)
             </Label>
             <Textarea
@@ -216,17 +216,17 @@ export function SubmissionModal({
               value={reflection}
               onChange={(e) => setReflection(e.target.value)}
               placeholder="What did you learn? How did it feel?"
-              className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 min-h-[80px]"
+              className="bg-white dark:bg-[#0D1F18] border-slate-300 dark:border-[#1E3B34] text-slate-900 dark:text-[#BEEBD7] placeholder:text-slate-400 dark:placeholder:text-[#6B8F7F] min-h-[80px]"
               maxLength={500}
             />
-            <p className="text-xs text-gray-500 text-right">
+            <p className="text-xs text-slate-500 dark:text-[#6B8F7F] text-right">
               {reflection.length}/500
             </p>
           </div>
 
           {/* Impact Summary */}
           <div className="space-y-2">
-            <Label htmlFor="impact" className="text-gray-700">
+            <Label htmlFor="impact" className="text-slate-700 dark:text-[#BEEBD7]">
               Impact Summary (optional)
             </Label>
             <Textarea
@@ -234,10 +234,10 @@ export function SubmissionModal({
               value={impactSummary}
               onChange={(e) => setImpactSummary(e.target.value)}
               placeholder="e.g., Recycled 5 lbs of plastic, planted 3 trees..."
-              className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 min-h-[60px]"
+              className="bg-white dark:bg-[#0D1F18] border-slate-300 dark:border-[#1E3B34] text-slate-900 dark:text-[#BEEBD7] placeholder:text-slate-400 dark:placeholder:text-[#6B8F7F] min-h-[60px]"
               maxLength={200}
             />
-            <p className="text-xs text-gray-500 text-right">
+            <p className="text-xs text-slate-500 dark:text-[#6B8F7F] text-right">
               {impactSummary.length}/200
             </p>
           </div>

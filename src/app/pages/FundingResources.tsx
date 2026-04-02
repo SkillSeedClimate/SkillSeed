@@ -276,7 +276,7 @@ function FundingCard({
               onClick={() => onViewDetails(opportunity)}
               className="flex-1 min-h-[40px] bg-[#0F3D2E] text-white text-sm font-semibold py-2 rounded-lg hover:bg-[#2F8F6B] transition-colors inline-flex items-center justify-center gap-1.5"
             >
-              View Details
+              Preview details
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
           )}
@@ -338,10 +338,11 @@ export function FundingResources() {
     fetchProfile();
   }, []);
 
-  // Fetch opportunities
+  // Fetch opportunities once (avoid loading flashes while typing/searching)
   useEffect(() => {
     fetchOpportunities();
-  }, [typeFilter, focusFilter, search]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Fetch saved when profile loads
   useEffect(() => {
@@ -360,20 +361,6 @@ export function FundingResources() {
         .eq("status", "active")
         .order("deadline", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: false });
-
-      if (typeFilter !== "All") {
-        query = query.eq("type", typeFilter);
-      }
-
-      if (focusFilter !== "All Focus Areas") {
-        query = query.contains("focus_areas", [focusFilter]);
-      }
-
-      if (search) {
-        query = query.or(
-          `title.ilike.%${search}%,description.ilike.%${search}%,funder_name.ilike.%${search}%`
-        );
-      }
 
       const { data, error: fetchError } = await query;
       if (fetchError) throw fetchError;
@@ -433,10 +420,25 @@ export function FundingResources() {
     setIsModalOpen(true);
   };
 
-  const closingSoonCount = opportunities.filter(o => o.is_closing_soon).length;
-  const communityPostedCount = opportunities.filter(o => !!o.poster_id).length;
+  const filteredOpportunities = opportunities
+    .filter((o) => {
+      if (typeFilter !== "All" && (o.type ?? "") !== typeFilter) return false;
+      if (focusFilter !== "All Focus Areas") {
+        const areas = o.focus_areas ?? [];
+        if (!areas.includes(focusFilter)) return false;
+      }
+      if (search) {
+        const q = search.toLowerCase();
+        const hay = `${o.title} ${o.description ?? ""} ${o.funder_name ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
 
-  const displayedOpportunities = [...opportunities].sort((a, b) => {
+  const closingSoonCount = filteredOpportunities.filter(o => o.is_closing_soon).length;
+  const communityPostedCount = filteredOpportunities.filter(o => !!o.poster_id).length;
+
+  const displayedOpportunities = [...filteredOpportunities].sort((a, b) => {
     if (sortBy === "newest") {
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     }
@@ -546,6 +548,14 @@ export function FundingResources() {
               <p className="text-sm text-slate-600 dark:text-[#94C8AF] mt-1">
                 Discover grants, fellowships, and partnerships to power your environmental mission.
               </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#E6F4EE] dark:bg-[#1E3B34] text-[#0F3D2E] dark:text-[#6DD4A8]">
+                  Sample listings (beta)
+                </span>
+                <span className="text-xs text-slate-500 dark:text-[#6B8F7F]">
+                  External source links will appear after launch.
+                </span>
+              </div>
             </div>
             <button
               onClick={handlePostClick}
@@ -808,6 +818,9 @@ export function FundingResources() {
                 <p className="text-sm text-slate-500 dark:text-[#94C8AF] mt-1">
                   {selectedOpportunity.funder_name ?? selectedOpportunity.profiles?.name ?? "Community"} · {selectedOpportunity.type ?? "Grant"}
                 </p>
+                <p className="mt-2 text-xs text-slate-500 dark:text-[#6B8F7F]">
+                  Sample listing (beta). Source links will be added after launch.
+                </p>
               </div>
               <button
                 onClick={() => setSelectedOpportunity(null)}
@@ -871,24 +884,13 @@ export function FundingResources() {
 
               {/* Actions */}
               <div className="flex gap-2">
-                {selectedOpportunity.apply_url ? (
-                  <a
-                    href={selectedOpportunity.apply_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 min-h-[44px] py-2.5 rounded-lg text-sm font-semibold bg-[#0F3D2E] text-white hover:bg-[#2F8F6B] transition-colors text-center inline-flex items-center justify-center gap-1.5"
-                  >
-                    Apply Now <ExternalLink className="w-4 h-4" />
-                  </a>
-                ) : (
-                  <button
-                    type="button"
-                    disabled
-                    className="flex-1 min-h-[44px] py-2.5 rounded-lg text-sm font-semibold bg-slate-100 dark:bg-[#1E3B34] text-slate-400 dark:text-[#6B8F7F] cursor-not-allowed"
-                  >
-                    No application link
-                  </button>
-                )}
+                <button
+                  type="button"
+                  disabled
+                  className="flex-1 min-h-[44px] py-2.5 rounded-lg text-sm font-semibold bg-slate-100 dark:bg-[#1E3B34] text-slate-500 dark:text-[#6B8F7F] cursor-not-allowed"
+                >
+                  Source link (post-launch)
+                </button>
                 <button
                   onClick={() => handleToggleSave(selectedOpportunity.id)}
                   className={`min-h-[44px] px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
