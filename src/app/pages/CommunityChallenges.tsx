@@ -607,7 +607,7 @@ export function CommunityChallenges() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
           {/* KPI strip skeleton */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[...Array(4)].map((_, i) => (
+            {[...Array(2)].map((_, i) => (
               <div
                 key={i}
                 className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4 animate-pulse"
@@ -624,7 +624,7 @@ export function CommunityChallenges() {
               <div className="h-12 w-64 bg-white dark:bg-[#132B23] rounded-lg border border-slate-200 dark:border-[#1E3B34] animate-pulse" />
               {/* Cards skeleton */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[...Array(4)].map((_, i) => (
+                {[...Array(2)].map((_, i) => (
                   <ChallengeCardSkeleton key={i} />
                 ))}
               </div>

@@ -117,15 +117,10 @@ const HIDDEN_MISSION_TITLES = new Set(["composting", "lestletlsss", "testtetssss
 function MissionCardSkeleton() {
   return (
     <div className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] overflow-hidden animate-pulse">
-      <div className="h-28 bg-slate-100 dark:bg-[#1E3B34]" />
+      <div className="h-24 bg-slate-100 dark:bg-[#1E3B34]" />
       <div className="p-4">
-        <div className="h-3 w-20 bg-slate-100 dark:bg-[#1E3B34] rounded mb-3" />
-        <div className="h-4 w-3/4 bg-slate-100 dark:bg-[#1E3B34] rounded mb-2" />
+        <div className="h-4 w-2/3 bg-slate-100 dark:bg-[#1E3B34] rounded mb-2" />
         <div className="h-3 w-1/2 bg-slate-100 dark:bg-[#1E3B34] rounded mb-4" />
-        <div className="flex gap-2 mb-4">
-          <div className="h-6 w-16 bg-slate-100 dark:bg-[#1E3B34] rounded-full" />
-          <div className="h-6 w-20 bg-slate-100 dark:bg-[#1E3B34] rounded-full" />
-        </div>
         <div className="h-9 w-full bg-slate-100 dark:bg-[#1E3B34] rounded-lg" />
       </div>
     </div>
@@ -139,11 +134,6 @@ function FilterBarSkeleton() {
         <div className="flex-1 h-10 bg-slate-100 dark:bg-[#1E3B34] rounded-lg" />
         <div className="h-10 w-32 bg-slate-100 dark:bg-[#1E3B34] rounded-lg" />
         <div className="h-10 w-28 bg-slate-100 dark:bg-[#1E3B34] rounded-lg" />
-      </div>
-      <div className="flex gap-2 mt-3">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-7 w-20 bg-slate-100 dark:bg-[#1E3B34] rounded-full" />
-        ))}
       </div>
     </div>
   );
@@ -365,7 +355,7 @@ export function MissionDashboard() {
           <KPIStripSkeleton />
           <FilterBarSkeleton />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
+            {[1, 2, 3].map((i) => (
               <MissionCardSkeleton key={i} />
             ))}
           </div>
