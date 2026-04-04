@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useLayoutEffect } from 'react';
 import type { Quest } from '../types/database';
 
 interface Message {
@@ -19,11 +19,16 @@ export function AiCoachPanel({ quest }: AiCoachPanelProps) {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  // Scroll only the chat column — scrollIntoView() on inner nodes scrolls the page too.
+  useLayoutEffect(() => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    });
+  }, [messages, loading]);
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
@@ -116,7 +121,10 @@ Keep responses concise (2-4 sentences max), practical, and encouraging. Focus on
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 bg-muted/30 dark:bg-[#0D1F18]">
+      <div
+        ref={messagesContainerRef}
+        className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col gap-3 bg-muted/30 dark:bg-[#0D1F18]"
+      >
         {messages.map((msg, i) => (
           <div
             key={i}
@@ -150,7 +158,6 @@ Keep responses concise (2-4 sentences max), practical, and encouraging. Focus on
             </div>
           </div>
         )}
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
@@ -163,6 +170,7 @@ Keep responses concise (2-4 sentences max), practical, and encouraging. Focus on
           className="flex-1 text-sm border border-border dark:border-[#1E3B34] bg-input-background dark:bg-[#0D1F18] rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30 focus:border-[#2F8F6B]"
         />
         <button
+          type="button"
           onClick={sendMessage}
           disabled={!input.trim() || loading}
           className="min-h-[40px] bg-[#0F3D2E] dark:bg-[#2F8F6B] text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-[#2F8F6B] dark:hover:bg-[#6DD4A8] dark:hover:text-[#0A2E20] transition-colors disabled:opacity-40"
