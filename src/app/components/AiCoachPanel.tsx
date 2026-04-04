@@ -1,5 +1,62 @@
 import { useState, useRef, useLayoutEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import type { Components } from 'react-markdown';
 import type { Quest } from '../types/database';
+
+/** Styled Markdown for coach replies only (user text stays plain for safety). */
+const coachMarkdownComponents: Components = {
+  p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
+  strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+  em: ({ children }) => <em className="italic opacity-95">{children}</em>,
+  ul: ({ children }) => <ul className="my-2 ml-1 list-disc space-y-1 pl-4">{children}</ul>,
+  ol: ({ children }) => <ol className="my-2 ml-1 list-decimal space-y-1 pl-4">{children}</ol>,
+  li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+  h1: ({ children }) => <p className="mb-2 font-semibold text-[0.95em]">{children}</p>,
+  h2: ({ children }) => <p className="mb-2 font-semibold text-[0.95em]">{children}</p>,
+  h3: ({ children }) => <p className="mb-1.5 font-semibold">{children}</p>,
+  a: ({ href, children }) => (
+    <a
+      href={href}
+      className="text-[#2F8F6B] dark:text-[#6DD4A8] underline underline-offset-2 break-all"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      {children}
+    </a>
+  ),
+  code: ({ className, children }) => {
+    const inline = !className;
+    return inline ? (
+      <code className="rounded bg-black/[0.08] dark:bg-white/10 px-1 py-0.5 text-[0.9em] font-mono">
+        {children}
+      </code>
+    ) : (
+      <code className={className}>{children}</code>
+    );
+  },
+  pre: ({ children }) => (
+    <pre className="mb-2 overflow-x-auto rounded-lg bg-black/[0.06] dark:bg-white/10 p-2.5 text-xs leading-relaxed">
+      {children}
+    </pre>
+  ),
+  blockquote: ({ children }) => (
+    <blockquote className="border-l-2 border-[#2F8F6B]/50 pl-3 my-2 text-muted-foreground dark:text-emerald-100/75">
+      {children}
+    </blockquote>
+  ),
+  hr: () => <hr className="my-3 border-border dark:border-[#1E3B34]" />,
+};
+
+function AssistantMessageBody({ content }: { content: string }) {
+  return (
+    <div className="break-words [&_.coach-md>*:first-child]:mt-0 [&_.coach-md>*:last-child]:mb-0">
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={coachMarkdownComponents} className="coach-md">
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+}
 
 interface Message {
   role: 'user' | 'assistant';
@@ -68,19 +125,21 @@ export function AiCoachPanel({ quest }: AiCoachPanelProps) {
           messages: [
             {
               role: 'system',
-              content: `You are an encouraging environmental coach helping a user complete the "${quest.title}" quest on SkillSeed, a climate learning platform. 
-              
+              content: `You are an encouraging environmental coach helping a user complete the "${quest.title}" quest on SkillSeed, a climate learning platform.
+
 The quest description: ${quest.description}
 
 The steps involved:
 ${stepsText}
 
-Keep responses concise (2-4 sentences max), practical, and encouraging. Focus on the Philippines context when relevant. Use simple language. Add a relevant emoji occasionally.`
+Formatting (always follow): reply in GitHub-flavored Markdown. Use **bold** for key terms and step titles. For multiple steps or tips, use a numbered list (1. one per line) or bullet lists (- item). Use short paragraphs (1–3 sentences). Avoid one huge paragraph.
+
+Tone: concise, practical, encouraging. Philippines context when relevant. Simple language. At most one emoji at the end when it fits naturally.`
             },
             ...messages.map(m => ({ role: m.role, content: m.content })),
             { role: 'user', content: userMessage.content }
           ],
-          max_tokens: 300,
+          max_tokens: 500,
           temperature: 0.7
         })
       });
@@ -137,7 +196,11 @@ Keep responses concise (2-4 sentences max), practical, and encouraging. Focus on
                   : 'bg-white dark:bg-[#132B23] text-card-foreground rounded-bl-sm border border-border dark:border-[#1E3B34]'
               }`}
             >
-              {msg.content}
+              {msg.role === 'assistant' ? (
+                <AssistantMessageBody content={msg.content} />
+              ) : (
+                <span className="whitespace-pre-wrap break-words">{msg.content}</span>
+              )}
             </div>
           </div>
         ))}
