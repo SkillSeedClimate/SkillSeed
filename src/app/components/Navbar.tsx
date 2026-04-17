@@ -102,7 +102,7 @@ export function Navbar() {
           </Link>
 
           {/* ── Center Nav (desktop) ── */}
-          <div className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
+          <div className="hidden lg:flex items-center gap-1">
             {navLinks.map((link) => (
               <div key={link.label} className="relative">
                 {link.comingSoon ? (
@@ -129,7 +129,7 @@ export function Navbar() {
           </div>
 
           {/* ── Right Side (desktop) ── */}
-          <div className="hidden md:flex items-center gap-2">
+          <div className="hidden lg:flex items-center gap-2">
             {mounted && <ThemeToggle />}
             {user ? (
               /* ── LOGGED IN ── */
@@ -227,7 +227,7 @@ export function Navbar() {
           </div>
 
           {/* ── Mobile controls ── */}
-          <div className="md:hidden flex items-center gap-0.5 shrink-0">
+          <div className="lg:hidden flex items-center gap-0.5 shrink-0">
             {mounted && <ThemeToggle />}
             <button
               type="button"
@@ -248,12 +248,12 @@ export function Navbar() {
           <button
             type="button"
             aria-label="Close menu"
-            className="md:hidden fixed inset-x-0 bottom-0 z-[80] bg-black/45 dark:bg-black/55"
+            className="lg:hidden fixed inset-x-0 bottom-0 z-[80] bg-black/45 dark:bg-black/55"
             style={{ top: "calc(env(safe-area-inset-top, 0px) + 4rem)" }}
             onClick={() => setMobileOpen(false)}
           />
           <div
-            className="md:hidden fixed left-0 right-0 bottom-0 z-[90] flex flex-col bg-white dark:bg-[#0D1F18] border-t border-slate-200 dark:border-[#1E3B34] shadow-[0_-8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.4)]"
+            className="lg:hidden fixed left-0 right-0 bottom-0 z-[90] flex flex-col bg-white dark:bg-[#0D1F18] border-t border-slate-200 dark:border-[#1E3B34] shadow-[0_-8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.4)]"
             style={{
               top: "calc(env(safe-area-inset-top, 0px) + 4rem)",
               paddingBottom: "max(0.75rem, env(safe-area-inset-bottom, 0px))",
