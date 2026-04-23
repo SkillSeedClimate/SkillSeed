@@ -20,11 +20,9 @@ import {
   Trash2,
   X,
   SlidersHorizontal,
-  Bookmark,
   ArrowRight,
   Building2,
   Zap,
-  Globe,
   CheckCircle2,
   RefreshCw,
   Plus,
@@ -548,6 +546,9 @@ export function MissionDashboard() {
           <div className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
             <p className="text-xs text-slate-500 dark:text-[#94C8AF] font-medium mb-1">My Applications</p>
             <p className="text-2xl font-bold text-slate-900 dark:text-white">{pendingApplicationsCount}</p>
+            {pendingApplicationsCount === 0 && (
+              <p className="text-xs text-slate-400 dark:text-[#6B8F7F] mt-0.5">Apply to your first mission</p>
+            )}
           </div>
         </div>
 
@@ -756,7 +757,7 @@ export function MissionDashboard() {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {sorted.map((mission) => {
                   const isOwner = user && String(mission.poster_id) === String(user.id);
                   const posterInfo = posterVerifiedByUserId[String(mission.poster_id)];
@@ -774,14 +775,18 @@ export function MissionDashboard() {
                     >
                       {/* Card header with icon */}
                       <div
-                        className={`relative h-24 flex items-center justify-center bg-gradient-to-br ${getCategoryGradient(mission.focus_area)}`}
+                        className={`relative h-40 flex items-center justify-center bg-gradient-to-br ${getCategoryGradient(mission.focus_area)}`}
                       >
                         <div className="w-11 h-11 rounded-lg bg-white/80 dark:bg-[#0D1F18]/80 backdrop-blur-sm flex items-center justify-center text-[#0F3D2E] dark:text-[#6DD4A8] shadow-sm">
                           {getCategoryIcon(mission.focus_area)}
                         </div>
-                        {/* Urgent badge only */}
+                        {/* Demo badge */}
+                        <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-white text-xs font-semibold text-gray-700 shadow-sm">
+                          Demo
+                        </span>
+                        {/* Urgent badge */}
                         {mission.type === "urgent" && (
-                          <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-semibold uppercase tracking-wide">
+                          <span className="absolute top-2.5 right-2.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-semibold uppercase tracking-wide">
                             <Zap className="w-2.5 h-2.5" />
                             Urgent
                           </span>
@@ -790,42 +795,25 @@ export function MissionDashboard() {
 
                       {/* Card body */}
                       <div className="p-4 flex flex-col flex-1">
-                        {/* Category chip + org */}
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-[#1E3B34] text-slate-600 dark:text-[#94C8AF] text-[10px] font-medium">
-                            {mission.focus_area?.[0] || "Project"}
-                          </span>
-                          <span className="px-2 py-0.5 rounded bg-[#E6F4EE] dark:bg-[#1E3B34] text-[#0F3D2E] dark:text-[#6DD4A8] text-[10px] font-semibold">
-                            Demo
-                          </span>
-                          <span className="text-[10px] text-slate-400 dark:text-[#6B8F7F]">by</span>
-                          <span className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-[#6B8F7F] truncate">
-                            {posterInfo?.name || "Community"}
-                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-[#0D1F18] text-slate-500 dark:text-[#94C8AF] border border-slate-200 dark:border-[#1E3B34]">
-                              Demo user
-                            </span>
-                            {posterInfo?.verified && (
-                              <CheckCircle2 className="w-2.5 h-2.5 text-[#2F8F6B] dark:text-[#6DD4A8]" />
-                            )}
-                          </span>
-                        </div>
-
-                        {/* Title */}
-                        <h3 className="text-sm font-semibold text-slate-900 dark:text-white leading-snug mb-2 line-clamp-2 group-hover:text-[#0F3D2E] dark:group-hover:text-[#6DD4A8] transition-colors">
+                        {/* Title — primary focal point */}
+                        <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-1.5 line-clamp-2 group-hover:text-[#0F3D2E] dark:group-hover:text-[#6DD4A8] transition-colors" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
                           {mission.title}
                         </h3>
 
-                        {/* Meta row: Location - Duration */}
-                        <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-[#6B8F7F] mb-3">
+                        {/* Meta row: Location · Duration */}
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-[#6B8F7F] mb-2.5">
                           <MapPin className="w-3 h-3 flex-shrink-0" />
                           <span>{mission.location || "Remote"}</span>
-                          <span className="text-slate-300 dark:text-[#1E3B34]">-</span>
+                          <span className="text-slate-300 dark:text-[#1E3B34]">·</span>
                           <Clock className="w-3 h-3 flex-shrink-0" />
                           <span>{mission.duration || "Flexible"}</span>
                         </div>
 
+                        {/* Spacer */}
+                        <div className="flex-1" />
+
                         {/* Slots needed */}
-                        <div className="flex items-center gap-2 flex-wrap mb-3">
+                        <div className="flex items-center gap-2 flex-wrap mb-1.5">
                           {(mission.volunteers_needed ?? 0) > 0 && (
                             <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-xs font-medium">
                               <Users className="w-3 h-3" />
@@ -841,7 +829,7 @@ export function MissionDashboard() {
                         </div>
 
                         {/* Skills tags */}
-                        <div className="flex flex-wrap gap-1 mb-4">
+                        <div className="flex flex-wrap gap-1 mb-1.5">
                           {matchSkills.slice(0, 2).map((skill) => (
                             <span
                               key={skill}
@@ -857,8 +845,23 @@ export function MissionDashboard() {
                           )}
                         </div>
 
-                        {/* Spacer */}
-                        <div className="flex-1" />
+                        {/* Category chip */}
+                        <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
+                          <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-[#1E3B34] text-slate-500 dark:text-[#94C8AF] text-[10px] font-medium">
+                            {mission.focus_area?.[0] || "Project"}
+                          </span>
+                        </div>
+
+                        {/* Poster attribution */}
+                        <div className="flex items-center gap-1 mt-1 mb-3">
+                          <span className="text-[10px] text-slate-400 dark:text-[#6B8F7F]">by</span>
+                          <span className="text-[10px] text-slate-400 dark:text-[#6B8F7F] truncate">
+                            {posterInfo?.name || "Community"}
+                          </span>
+                          {posterInfo?.verified && (
+                            <CheckCircle2 className="w-2.5 h-2.5 text-[#2F8F6B] dark:text-[#6DD4A8] flex-shrink-0" />
+                          )}
+                        </div>
 
                         {/* CTA */}
                         <Link
