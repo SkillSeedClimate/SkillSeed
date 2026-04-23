@@ -15,16 +15,12 @@ import {
   Target,
   Loader2,
   Briefcase,
-  Heart,
   BookOpen,
   Trash2,
   X,
   SlidersHorizontal,
-  Bookmark,
-  ArrowRight,
   Building2,
   Zap,
-  Globe,
   CheckCircle2,
   RefreshCw,
   Plus,
@@ -158,21 +154,26 @@ function KPIStripSkeleton() {
 
 export function MissionDashboard() {
   const { user } = useAuth();
+
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const [workTab, setWorkTab] = useState<WorkTabKey>(() => workTabFromSearchParams(searchParams));
+  const [selectedMission, setSelectedMission] = useState<MissionCard | null>(null);
 
   useEffect(() => {
     setWorkTab(workTabFromSearchParams(searchParams));
   }, [searchParams]);
-  const [search, setSearch] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
   const [participantType, setParticipantType] = useState<"all" | "volunteer" | "professional">("all");
   const [sortBy, setSortBy] = useState<"best_match" | "urgent_first" | "newest">("best_match");
   const [urgentOnly, setUrgentOnly] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
   const filterSheetRef = useRef<HTMLDivElement>(null);
+  const filtersDropdownRef = useRef<HTMLDivElement>(null);
   
   // Real data from Supabase
   const [missions, setMissions] = useState<MissionCard[]>([]);
@@ -196,6 +197,28 @@ export function MissionDashboard() {
     const bump = () => setMissionDataRevision((n) => n + 1);
     window.addEventListener("skillseed:withdrew-mission-applications", bump);
     return () => window.removeEventListener("skillseed:withdrew-mission-applications", bump);
+  }, []);
+
+  // Close filters dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (filtersDropdownRef.current && !filtersDropdownRef.current.contains(e.target as Node)) {
+        setShowFilters(false);
+      }
+    }
+    if (showFilters) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showFilters]);
+
+  // Close drawer on Escape key
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setSelectedMission(null);
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   // Close mobile filters on outside click
@@ -409,9 +432,10 @@ export function MissionDashboard() {
     if (!isValidMission(m)) return false;
 
     const matchSearch =
-      m.title.toLowerCase().includes(search.toLowerCase()) ||
-      (m.description?.toLowerCase().includes(search.toLowerCase()) || false) ||
-      (m.skills_needed?.some((s) => s.toLowerCase().includes(search.toLowerCase())) || false);
+      m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (m.description?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
+      (m.skills_needed?.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase())) || false) ||
+      (m.focus_area?.some((f) => f.toLowerCase().includes(searchQuery.toLowerCase())) || false);
     const matchCat =
       selectedCategory === "All" ||
       (m.focus_area?.some((f) => f.toLowerCase().includes(selectedCategory.toLowerCase())) || false);
@@ -450,7 +474,7 @@ export function MissionDashboard() {
   const pendingApplicationsCount = Object.values(applicationStatusByProject).filter((s) => s === "pending").length;
 
   const hasActiveFilters =
-    search !== "" ||
+    searchQuery !== "" ||
     selectedRegion !== "All Regions" ||
     selectedCategory !== "All" ||
     urgentOnly ||
@@ -458,7 +482,7 @@ export function MissionDashboard() {
     sortBy !== "best_match";
 
   function clearAllFilters() {
-    setSearch("");
+    setSearchQuery("");
     setSelectedRegion("All Regions");
     setSelectedCategory("All");
     setUrgentOnly(false);
@@ -502,9 +526,7 @@ export function MissionDashboard() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#2F8F6B] dark:text-[#6DD4A8] mb-1">
-                Mission Board
-              </p>
+
               <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white" style={{ fontFamily: "'Manrope', sans-serif" }}>
                 Find Your Mission
               </h1>
@@ -523,10 +545,8 @@ export function MissionDashboard() {
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
-        {/* ─────────────────────────────────────────────────────────────────────
-            KPI Strip
-        ───────────────────────────────────────────────────────────────────── */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+        {/* Stats Pills */}
         <div className="grid grid-cols-3 gap-3">
           <button
             onClick={() => { setUrgentOnly(false); clearAllFilters(); }}
@@ -554,165 +574,206 @@ export function MissionDashboard() {
         {/* ─────────────────────────────────────────────────────────────────────
             Tab Bar
         ───────────────────────────────────────────────────────────────────── */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
-          {[
-            { key: "volunteers" as const, label: "Volunteers", icon: Heart },
-            { key: "professionals" as const, label: "Professionals", icon: Briefcase },
-            ...(user ? [{ key: "my_projects" as const, label: "My Projects", icon: Target }] : []),
-          ].map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => setWorkTab(key)}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] min-h-[40px] ${
-                workTab === key
-                  ? "bg-[#0F3D2E] text-white"
-                  : "bg-white dark:bg-[#132B23] border border-slate-200 dark:border-[#1E3B34] text-slate-600 dark:text-[#94C8AF] hover:border-[#2F8F6B]/50"
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {label}
-            </button>
-          ))}
-        </div>
+        {/* Search bar: input | tabs | filters — all in one container */}
+        <div className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
+          <div className="flex items-center gap-2">
+            {/* Search input */}
+            {workTab !== "my_projects" ? (
+              <div className="flex-1 relative">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search missions, skills, organizations..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setSearchFocused(true)}
+                  onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+                  onKeyDown={(e) => { if (e.key === "Escape") { setSearchFocused(false); (e.target as HTMLInputElement).blur(); } }}
+                  className="w-full min-h-[40px] pl-10 pr-4 py-2 border border-slate-200 dark:border-[#1E3B34] bg-slate-50 dark:bg-[#0D1F18] rounded-lg text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30 focus:border-[#2F8F6B] transition-all text-slate-900 dark:text-white"
+                />
+                {searchFocused && (() => {
+                  const SUGGESTED_SKILLS = ["GIS Mapping", "Solar Installation", "Marine Biology", "Community Organising", "Teaching", "Forestry"];
+                  const predictive = searchQuery.length > 0
+                    ? missions.filter((m) => isValidMission(m) && (
+                        m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        (m.location ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        (m.focus_area ?? []).some((f) => f.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                        (m.skills_needed ?? []).some((s) => s.toLowerCase().includes(searchQuery.toLowerCase()))
+                      )).slice(0, 5)
+                    : [];
+                  return (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#132B23] border border-slate-200 dark:border-[#1E3B34] rounded-xl shadow-lg p-3 z-50 max-h-80 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-150">
+                      {searchQuery.length > 0 ? (
+                        predictive.length > 0 ? (
+                          <div className="space-y-0.5">
+                            {predictive.map((m) => (
+                              <button
+                                key={m.id}
+                                onClick={() => { setSearchQuery(m.title); setSearchFocused(false); }}
+                                className="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-[#1E3B34] text-left transition-colors"
+                              >
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{m.title}</p>
+                                  <p className="text-xs text-slate-400 dark:text-[#6B8F7F] truncate">
+                                    {m.location || "Remote"}{m.focus_area?.[0] ? ` · ${m.focus_area[0]}` : ""}
+                                  </p>
+                                </div>
+                                <ChevronRight className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-slate-400 dark:text-[#6B8F7F] px-3 py-2">No missions match "{searchQuery}"</p>
+                        )
+                      ) : (
+                        <div className="space-y-4">
+                          <div>
+                            <p className="text-[10px] font-semibold text-slate-400 dark:text-[#6B8F7F] uppercase tracking-wide mb-2 px-1">Suggested Skills</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {SUGGESTED_SKILLS.map((skill) => (
+                                <button
+                                  key={skill}
+                                  onClick={() => { setSearchQuery(skill); setSearchFocused(false); }}
+                                  className="text-xs px-3 py-1.5 rounded-full bg-slate-100 dark:bg-[#1E3B34] text-slate-600 dark:text-[#94C8AF] hover:bg-[#E8F5EF] dark:hover:bg-[#0F3D2E]/50 transition-colors"
+                                >
+                                  {skill}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-semibold text-slate-400 dark:text-[#6B8F7F] uppercase tracking-wide mb-2 px-1">Browse by Category</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {CATEGORIES.map((cat) => (
+                                <button
+                                  key={cat}
+                                  onClick={() => { setSelectedCategory(cat); setSearchFocused(false); }}
+                                  className={`text-xs px-3 py-1.5 rounded-full transition-colors ${
+                                    selectedCategory === cat
+                                      ? "bg-[#0F3D2E] text-white"
+                                      : "bg-slate-100 dark:bg-[#1E3B34] text-slate-600 dark:text-[#94C8AF] hover:bg-[#E8F5EF] dark:hover:bg-[#0F3D2E]/50"
+                                  }`}
+                                >
+                                  {cat}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : (
+              <div className="flex-1" />
+            )}
 
-        {/* ─────────────────────────────────────────────────────────────────────
-            Search & Filters
-        ───────────────────────────────────────────────────────────────────── */}
-        {workTab !== "my_projects" && (
-          <>
-            <div className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
-              {/* Search row */}
-              <div className="flex gap-3">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Search missions, skills, organizations..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full min-h-[44px] pl-10 pr-4 py-2.5 border border-slate-200 dark:border-[#1E3B34] rounded-lg text-sm bg-white dark:bg-[#0D1F18] text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-[#6B8F7F] focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/50 focus:border-[#2F8F6B]"
-                  />
-                </div>
-
-                {/* Desktop filters */}
-                <div className="hidden md:flex items-center gap-2">
-                  <select
-                    value={selectedRegion}
-                    onChange={(e) => setSelectedRegion(e.target.value)}
-                    className="min-h-[44px] px-3 py-2 border border-slate-200 dark:border-[#1E3B34] rounded-lg text-sm bg-white dark:bg-[#0D1F18] text-slate-700 dark:text-[#BEEBD7] focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/50"
-                  >
-                    {REGIONS.map((r) => (
-                      <option key={r}>{r}</option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={() => setUrgentOnly(!urgentOnly)}
-                    className={`min-h-[44px] flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] ${
-                      urgentOnly
-                        ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400"
-                        : "border-slate-200 dark:border-[#1E3B34] text-slate-600 dark:text-[#94C8AF] hover:border-[#2F8F6B]/50"
-                    }`}
-                  >
-                    <Zap className="w-4 h-4" />
-                    Urgent
-                  </button>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                    className="min-h-[44px] px-3 py-2 border border-slate-200 dark:border-[#1E3B34] rounded-lg text-sm bg-white dark:bg-[#0D1F18] text-slate-700 dark:text-[#BEEBD7] focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/50"
-                  >
-                    <option value="best_match">Best Match</option>
-                    <option value="urgent_first">Urgent First</option>
-                    <option value="newest">Newest</option>
-                  </select>
-                </div>
-
-                {/* Mobile filter button */}
+            {/* Role tabs */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {(([
+                { key: "volunteers", label: "Volunteers" },
+                { key: "professionals", label: "Professionals" },
+                ...(user ? [{ key: "my_projects", label: "My Projects" }] : []),
+              ]) as { key: WorkTabKey; label: string }[]).map(({ key, label }) => (
                 <button
-                  onClick={() => setShowMobileFilters(true)}
-                  className="md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center border border-slate-200 dark:border-[#1E3B34] rounded-lg text-slate-600 dark:text-[#94C8AF] hover:border-[#2F8F6B]/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B]"
+                  key={key}
+                  onClick={() => setWorkTab(key)}
+                  className={`min-h-[40px] px-3 py-1.5 rounded-lg border text-sm font-medium whitespace-nowrap transition-colors focus:outline-none ${
+                    workTab === key
+                      ? "bg-[#0F3D2E] text-white border-transparent"
+                      : "border-slate-200 dark:border-[#1E3B34] text-slate-500 dark:text-[#6B8F7F] hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#1E3B34]"
+                  }`}
                 >
-                  <SlidersHorizontal className="w-5 h-5" />
+                  {label}
                 </button>
-              </div>
-
-              {/* Category chips */}
-              <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
-                {CATEGORIES.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] ${
-                      selectedCategory === cat
-                        ? "bg-[#0F3D2E] text-white"
-                        : "bg-slate-100 dark:bg-[#1E3B34] text-slate-600 dark:text-[#94C8AF] hover:bg-[#E8F5EF] dark:hover:bg-[#0F3D2E]/50"
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-
-              {/* Active filters */}
-              {hasActiveFilters && (
-                <div className="flex items-center gap-2 mt-3 flex-wrap">
-                  <span className="text-xs text-slate-500 dark:text-[#6B8F7F]">Active filters:</span>
-                  {search && (
-                    <span className="text-xs px-2 py-1 rounded-full bg-[#E8F5EF] dark:bg-[#1E3B34] text-[#0F3D2E] dark:text-[#6DD4A8]">
-                      "{search}"
-                    </span>
-                  )}
-                  {selectedRegion !== "All Regions" && (
-                    <span className="text-xs px-2 py-1 rounded-full bg-[#E8F5EF] dark:bg-[#1E3B34] text-[#0F3D2E] dark:text-[#6DD4A8]">
-                      {selectedRegion}
-                    </span>
-                  )}
-                  {urgentOnly && (
-                    <span className="text-xs px-2 py-1 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">
-                      Urgent only
-                    </span>
-                  )}
-                  <button
-                    onClick={clearAllFilters}
-                    className="text-xs font-medium text-[#2F8F6B] hover:text-[#0F3D2E] dark:hover:text-[#6DD4A8] underline focus:outline-none"
-                  >
-                    Clear all
-                  </button>
-                </div>
-              )}
+              ))}
             </div>
 
-            {/* ─────────────────────────────────────────────────────────────────────
-                Urgent Banner
-            ───────────────────────────────────────────────────────────────────── */}
-            {urgent.length > 0 && !urgentOnly && (
-              <button
-                onClick={() => setUrgentOnly(true)}
-                className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl text-left hover:border-amber-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center flex-shrink-0">
-                    <Zap className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            {/* Filters button */}
+            {workTab !== "my_projects" && (
+              <div ref={filtersDropdownRef} className="relative shrink-0">
+                <button
+                  onClick={() => setShowFilters((v) => !v)}
+                  className={`min-h-[40px] flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] ${
+                    showFilters
+                      ? "bg-[#0F3D2E] text-white border-transparent"
+                      : "border-slate-200 dark:border-[#1E3B34] text-slate-600 dark:text-[#94C8AF] hover:bg-slate-100 dark:hover:bg-[#1E3B34]"
+                  }`}
+                >
+                  <SlidersHorizontal className="w-4 h-4" />
+                  Filters
+                </button>
+                {showFilters && (
+                  <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-[#132B23] border border-slate-200 dark:border-[#1E3B34] rounded-xl shadow-lg p-4 z-50 space-y-4">
+                    <div>
+                      <label className="text-xs font-medium text-slate-500 dark:text-[#94C8AF] mb-1.5 block">Region</label>
+                      <select
+                        value={selectedRegion}
+                        onChange={(e) => setSelectedRegion(e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-200 dark:border-[#1E3B34] rounded-lg text-sm bg-white dark:bg-[#0D1F18] text-slate-700 dark:text-[#BEEBD7] focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/50"
+                      >
+                        {REGIONS.map((r) => <option key={r}>{r}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-slate-500 dark:text-[#94C8AF] mb-1.5 block">Sort by</label>
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                        className="w-full px-3 py-2 border border-slate-200 dark:border-[#1E3B34] rounded-lg text-sm bg-white dark:bg-[#0D1F18] text-slate-700 dark:text-[#BEEBD7] focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/50"
+                      >
+                        <option value="best_match">Best Match</option>
+                        <option value="urgent_first">Urgent First</option>
+                        <option value="newest">Newest</option>
+                      </select>
+                    </div>
+                    <button
+                      onClick={() => setShowFilters(false)}
+                      className="w-full py-2 bg-[#0F3D2E] text-white text-sm font-medium rounded-lg hover:bg-[#1a5241] transition-colors"
+                    >
+                      Apply
+                    </button>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
-                      {urgent.length} urgent mission{urgent.length > 1 ? "s" : ""} need help now
-                    </p>
-                    <p className="text-xs text-amber-600 dark:text-amber-400">Critical deadlines approaching</p>
-                  </div>
-                </div>
-                <ArrowRight className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-              </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {workTab !== "my_projects" && (
+          <>
+            {/* Active filters */}
+            {hasActiveFilters && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-slate-500 dark:text-[#6B8F7F]">Active filters:</span>
+                {searchQuery && (
+                  <span className="text-xs px-2 py-1 rounded-full bg-[#E8F5EF] dark:bg-[#1E3B34] text-[#0F3D2E] dark:text-[#6DD4A8]">
+                    "{searchQuery}"
+                  </span>
+                )}
+                {selectedRegion !== "All Regions" && (
+                  <span className="text-xs px-2 py-1 rounded-full bg-[#E8F5EF] dark:bg-[#1E3B34] text-[#0F3D2E] dark:text-[#6DD4A8]">
+                    {selectedRegion}
+                  </span>
+                )}
+                {urgentOnly && (
+                  <span className="text-xs px-2 py-1 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">
+                    Urgent only
+                  </span>
+                )}
+                <button
+                  onClick={clearAllFilters}
+                  className="text-xs font-medium text-[#2F8F6B] hover:text-[#0F3D2E] dark:hover:text-[#6DD4A8] underline focus:outline-none"
+                >
+                  Clear all
+                </button>
+              </div>
             )}
 
             {/* ────────────────────────────────────────────────────────────────�����────
                 Results Count
             ───────────────────────────────────────────────────────────────────── */}
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-slate-500 dark:text-[#6B8F7F]">
-                <span className="font-semibold text-slate-900 dark:text-white">{sorted.length}</span> missions found
-              </p>
-            </div>
 
             {/* ─────────────────────────────────────────────────────────────────────
                 Mission Cards Grid
@@ -756,7 +817,7 @@ export function MissionDashboard() {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {sorted.map((mission) => {
                   const isOwner = user && String(mission.poster_id) === String(user.id);
                   const posterInfo = posterVerifiedByUserId[String(mission.poster_id)];
@@ -770,18 +831,23 @@ export function MissionDashboard() {
                   return (
                     <article
                       key={mission.id}
-                      className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] overflow-hidden hover:border-[#2F8F6B]/50 hover:shadow-sm transition-all duration-200 flex flex-col group"
+                      onClick={() => setSelectedMission(mission)}
+                      className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] overflow-hidden hover:border-[#2F8F6B]/50 hover:shadow-md transition-shadow duration-200 flex flex-col group cursor-pointer"
                     >
                       {/* Card header with icon */}
                       <div
-                        className={`relative h-24 flex items-center justify-center bg-gradient-to-br ${getCategoryGradient(mission.focus_area)}`}
+                        className={`relative h-40 flex items-center justify-center bg-gradient-to-br ${getCategoryGradient(mission.focus_area)}`}
                       >
                         <div className="w-11 h-11 rounded-lg bg-white/80 dark:bg-[#0D1F18]/80 backdrop-blur-sm flex items-center justify-center text-[#0F3D2E] dark:text-[#6DD4A8] shadow-sm">
                           {getCategoryIcon(mission.focus_area)}
                         </div>
-                        {/* Urgent badge only */}
+                        {/* Demo badge */}
+                        <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-white text-xs font-semibold text-gray-700 shadow-sm">
+                          Demo
+                        </span>
+                        {/* Urgent badge */}
                         {mission.type === "urgent" && (
-                          <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-semibold uppercase tracking-wide">
+                          <span className="absolute top-2.5 right-2.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-semibold uppercase tracking-wide">
                             <Zap className="w-2.5 h-2.5" />
                             Urgent
                           </span>
@@ -790,42 +856,25 @@ export function MissionDashboard() {
 
                       {/* Card body */}
                       <div className="p-4 flex flex-col flex-1">
-                        {/* Category chip + org */}
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-[#1E3B34] text-slate-600 dark:text-[#94C8AF] text-[10px] font-medium">
-                            {mission.focus_area?.[0] || "Project"}
-                          </span>
-                          <span className="px-2 py-0.5 rounded bg-[#E6F4EE] dark:bg-[#1E3B34] text-[#0F3D2E] dark:text-[#6DD4A8] text-[10px] font-semibold">
-                            Demo
-                          </span>
-                          <span className="text-[10px] text-slate-400 dark:text-[#6B8F7F]">by</span>
-                          <span className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-[#6B8F7F] truncate">
-                            {posterInfo?.name || "Community"}
-                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-[#0D1F18] text-slate-500 dark:text-[#94C8AF] border border-slate-200 dark:border-[#1E3B34]">
-                              Demo user
-                            </span>
-                            {posterInfo?.verified && (
-                              <CheckCircle2 className="w-2.5 h-2.5 text-[#2F8F6B] dark:text-[#6DD4A8]" />
-                            )}
-                          </span>
-                        </div>
-
-                        {/* Title */}
-                        <h3 className="text-sm font-semibold text-slate-900 dark:text-white leading-snug mb-2 line-clamp-2 group-hover:text-[#0F3D2E] dark:group-hover:text-[#6DD4A8] transition-colors">
+                        {/* Title — primary focal point */}
+                        <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1.5 line-clamp-2 group-hover:text-[#0F3D2E] dark:group-hover:text-[#6DD4A8] transition-colors" style={{ fontFamily: "var(--font-body)" }}>
                           {mission.title}
                         </h3>
 
-                        {/* Meta row: Location - Duration */}
-                        <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-[#6B8F7F] mb-3">
+                        {/* Meta row: Location · Duration */}
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-[#6B8F7F] mb-2.5">
                           <MapPin className="w-3 h-3 flex-shrink-0" />
                           <span>{mission.location || "Remote"}</span>
-                          <span className="text-slate-300 dark:text-[#1E3B34]">-</span>
+                          <span className="text-slate-300 dark:text-[#1E3B34]">·</span>
                           <Clock className="w-3 h-3 flex-shrink-0" />
                           <span>{mission.duration || "Flexible"}</span>
                         </div>
 
+                        {/* Spacer */}
+                        <div className="flex-1" />
+
                         {/* Slots needed */}
-                        <div className="flex items-center gap-2 flex-wrap mb-3">
+                        <div className="flex items-center gap-2 flex-wrap mb-1.5">
                           {(mission.volunteers_needed ?? 0) > 0 && (
                             <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-xs font-medium">
                               <Users className="w-3 h-3" />
@@ -841,7 +890,7 @@ export function MissionDashboard() {
                         </div>
 
                         {/* Skills tags */}
-                        <div className="flex flex-wrap gap-1 mb-4">
+                        <div className="flex flex-wrap gap-1 mb-1.5">
                           {matchSkills.slice(0, 2).map((skill) => (
                             <span
                               key={skill}
@@ -857,12 +906,27 @@ export function MissionDashboard() {
                           )}
                         </div>
 
-                        {/* Spacer */}
-                        <div className="flex-1" />
+                        {/* Category chip */}
+                        <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
+                          <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-[#1E3B34] text-slate-500 dark:text-[#94C8AF] text-[10px] font-medium">
+                            {mission.focus_area?.[0] || "Project"}
+                          </span>
+                        </div>
+
+                        {/* Poster attribution */}
+                        <div className="flex items-center gap-1 mt-1 mb-3">
+                          <span className="text-[10px] text-slate-400 dark:text-[#6B8F7F]">by</span>
+                          <span className="text-[10px] text-slate-400 dark:text-[#6B8F7F] truncate">
+                            {posterInfo?.name || "Community"}
+                          </span>
+                          {posterInfo?.verified && (
+                            <CheckCircle2 className="w-2.5 h-2.5 text-[#2F8F6B] dark:text-[#6DD4A8] flex-shrink-0" />
+                          )}
+                        </div>
 
                         {/* CTA */}
-                        <Link
-                          to={user ? `/missions/${mission.id}` : "/auth"}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSelectedMission(mission); }}
                           className={`w-full min-h-[44px] flex items-center justify-center gap-1.5 text-sm font-medium rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] ${
                             isOwner
                               ? "border border-[#2F8F6B] text-[#0F3D2E] dark:text-[#6DD4A8] hover:bg-[#E8F5EF] dark:hover:bg-[#1E3B34]"
@@ -883,7 +947,7 @@ export function MissionDashboard() {
                             ? "View & Apply"
                             : "Sign in to Apply"}
                           <ChevronRight className="w-4 h-4" />
-                        </Link>
+                        </button>
                       </div>
                     </article>
                   );
@@ -988,6 +1052,165 @@ export function MissionDashboard() {
           </div>
         </div>
       )}
+
+      {/* ─────────────────────────────────────────────────────────────────────
+          Mission Detail Drawer
+      ───────────────────────────────────────────────────────────────────── */}
+      {/* Backdrop */}
+      {selectedMission && (
+        <div
+          className="fixed inset-0 bg-black/30 z-40"
+          onClick={() => setSelectedMission(null)}
+        />
+      )}
+
+      {/* Drawer */}
+      <div
+        className={`fixed top-0 right-0 h-full w-full sm:w-[420px] z-50 bg-white dark:bg-[#0D1F18] shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${
+          selectedMission ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        {selectedMission && (() => {
+          const dm = selectedMission;
+          const dmPosterInfo = posterVerifiedByUserId[String(dm.poster_id)];
+          const dmJoined = joinedCounts[dm.id];
+          const dmAppStatus = applicationStatusByProject[dm.id];
+          const dmSkills = dm.skills_needed ?? [];
+          return (
+            <>
+              {/* Banner */}
+              <div className={`relative h-40 flex-shrink-0 flex items-center justify-center bg-gradient-to-br ${getCategoryGradient(dm.focus_area)}`}>
+                <div className="w-14 h-14 rounded-xl bg-white/80 dark:bg-[#0D1F18]/80 backdrop-blur-sm flex items-center justify-center text-[#0F3D2E] dark:text-[#6DD4A8] shadow-sm">
+                  {getCategoryIcon(dm.focus_area)}
+                </div>
+                {dm.type === "urgent" && (
+                  <span className="absolute top-3 right-3 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-semibold uppercase tracking-wide">
+                    <Zap className="w-2.5 h-2.5" />
+                    Urgent
+                  </span>
+                )}
+                <button
+                  onClick={() => setSelectedMission(null)}
+                  className="absolute top-3 left-3 w-8 h-8 flex items-center justify-center rounded-full bg-white/80 dark:bg-[#0D1F18]/80 backdrop-blur-sm text-slate-600 dark:text-[#94C8AF] hover:bg-white dark:hover:bg-[#0D1F18] transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Scrollable body */}
+              <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                {/* Title */}
+                <h2
+                  className="text-2xl font-semibold text-slate-900 dark:text-white leading-snug"
+                  style={{ fontFamily: "'Fraunces', Georgia, serif" }}
+                >
+                  {dm.title}
+                </h2>
+
+                {/* Location · Duration */}
+                <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-[#6B8F7F]">
+                  <MapPin className="w-4 h-4 flex-shrink-0" />
+                  <span>{dm.location || "Remote"}</span>
+                  <span className="text-slate-300 dark:text-[#1E3B34]">·</span>
+                  <Clock className="w-4 h-4 flex-shrink-0" />
+                  <span>{dm.duration || "Flexible"}</span>
+                </div>
+
+                {/* Slot counts */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {(dm.volunteers_needed ?? 0) > 0 && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-sm font-medium">
+                      <Users className="w-3.5 h-3.5" />
+                      {(dmJoined?.volunteers_joined ?? 0)}/{dm.volunteers_needed} volunteers
+                    </span>
+                  )}
+                  {(dm.professionals_needed ?? 0) > 0 && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-sm font-medium">
+                      <Briefcase className="w-3.5 h-3.5" />
+                      {(dmJoined?.professionals_joined ?? 0)}/{dm.professionals_needed} professionals
+                    </span>
+                  )}
+                </div>
+
+                {/* Description */}
+                {dm.description && (
+                  <div>
+                    <p className="text-sm font-medium text-slate-700 dark:text-[#BEEBD7] mb-1">About this mission</p>
+                    <p className="text-sm text-slate-600 dark:text-[#94C8AF] leading-relaxed">{dm.description}</p>
+                  </div>
+                )}
+
+                {/* Skills needed */}
+                {dmSkills.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium text-slate-700 dark:text-[#BEEBD7] mb-2">Skills needed</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {dmSkills.map((skill) => (
+                        <span
+                          key={skill}
+                          className="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-[#1E3B34] text-slate-600 dark:text-[#94C8AF]"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Focus areas */}
+                {(dm.focus_area ?? []).length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium text-slate-700 dark:text-[#BEEBD7] mb-2">Focus areas</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(dm.focus_area ?? []).map((area) => (
+                        <span
+                          key={area}
+                          className="text-xs px-2.5 py-1 rounded-full bg-[#E8F5EF] dark:bg-[#1E3B34] text-[#0F3D2E] dark:text-[#6DD4A8]"
+                        >
+                          {area}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Posted by */}
+                <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-[#6B8F7F]">
+                  <span>Posted by</span>
+                  <span className="font-medium">{dmPosterInfo?.name || "Community"}</span>
+                  {dmPosterInfo?.verified && (
+                    <CheckCircle2 className="w-3 h-3 text-[#2F8F6B] dark:text-[#6DD4A8]" />
+                  )}
+                </div>
+              </div>
+
+              {/* Footer CTA */}
+              <div className="flex-shrink-0 p-4 border-t border-slate-200 dark:border-[#1E3B34]">
+                <Link
+                  to={user ? `/missions/${dm.id}` : "/auth"}
+                  className={`w-full min-h-[48px] flex items-center justify-center gap-2 text-sm font-medium rounded-xl transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] ${
+                    dmAppStatus === "pending"
+                      ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+                      : dmAppStatus === "accepted"
+                      ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+                      : "bg-[#0F3D2E] text-white hover:bg-[#1a5241]"
+                  }`}
+                >
+                  {dmAppStatus === "pending"
+                    ? "Application Pending"
+                    : dmAppStatus === "accepted"
+                    ? "Connected"
+                    : user
+                    ? "View & Apply"
+                    : "Sign in to Apply"}
+                  <ChevronRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </>
+          );
+        })()}
+      </div>
     </div>
   );
 }
