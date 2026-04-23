@@ -156,9 +156,11 @@ function KPIStripSkeleton() {
 
 export function MissionDashboard() {
   const { user } = useAuth();
+
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const [workTab, setWorkTab] = useState<WorkTabKey>(() => workTabFromSearchParams(searchParams));
+  const [selectedMission, setSelectedMission] = useState<MissionCard | null>(null);
 
   useEffect(() => {
     setWorkTab(workTabFromSearchParams(searchParams));
@@ -194,6 +196,15 @@ export function MissionDashboard() {
     const bump = () => setMissionDataRevision((n) => n + 1);
     window.addEventListener("skillseed:withdrew-mission-applications", bump);
     return () => window.removeEventListener("skillseed:withdrew-mission-applications", bump);
+  }, []);
+
+  // Close drawer on Escape key
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setSelectedMission(null);
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   // Close mobile filters on outside click
@@ -771,7 +782,8 @@ export function MissionDashboard() {
                   return (
                     <article
                       key={mission.id}
-                      className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] overflow-hidden hover:border-[#2F8F6B]/50 hover:shadow-sm transition-all duration-200 flex flex-col group"
+                      onClick={() => setSelectedMission(mission)}
+                      className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] overflow-hidden hover:border-[#2F8F6B]/50 hover:shadow-md transition-shadow duration-200 flex flex-col group cursor-pointer"
                     >
                       {/* Card header with icon */}
                       <div
@@ -796,7 +808,7 @@ export function MissionDashboard() {
                       {/* Card body */}
                       <div className="p-4 flex flex-col flex-1">
                         {/* Title — primary focal point */}
-                        <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-1.5 line-clamp-2 group-hover:text-[#0F3D2E] dark:group-hover:text-[#6DD4A8] transition-colors" style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
+                        <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1.5 line-clamp-2 group-hover:text-[#0F3D2E] dark:group-hover:text-[#6DD4A8] transition-colors" style={{ fontFamily: "var(--font-body)" }}>
                           {mission.title}
                         </h3>
 
@@ -864,8 +876,8 @@ export function MissionDashboard() {
                         </div>
 
                         {/* CTA */}
-                        <Link
-                          to={user ? `/missions/${mission.id}` : "/auth"}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSelectedMission(mission); }}
                           className={`w-full min-h-[44px] flex items-center justify-center gap-1.5 text-sm font-medium rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] ${
                             isOwner
                               ? "border border-[#2F8F6B] text-[#0F3D2E] dark:text-[#6DD4A8] hover:bg-[#E8F5EF] dark:hover:bg-[#1E3B34]"
@@ -886,7 +898,7 @@ export function MissionDashboard() {
                             ? "View & Apply"
                             : "Sign in to Apply"}
                           <ChevronRight className="w-4 h-4" />
-                        </Link>
+                        </button>
                       </div>
                     </article>
                   );
@@ -991,6 +1003,165 @@ export function MissionDashboard() {
           </div>
         </div>
       )}
+
+      {/* ─────────────────────────────────────────────────────────────────────
+          Mission Detail Drawer
+      ───────────────────────────────────────────────────────────────────── */}
+      {/* Backdrop */}
+      {selectedMission && (
+        <div
+          className="fixed inset-0 bg-black/30 z-40"
+          onClick={() => setSelectedMission(null)}
+        />
+      )}
+
+      {/* Drawer */}
+      <div
+        className={`fixed top-0 right-0 h-full w-full sm:w-[420px] z-50 bg-white dark:bg-[#0D1F18] shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${
+          selectedMission ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        {selectedMission && (() => {
+          const dm = selectedMission;
+          const dmPosterInfo = posterVerifiedByUserId[String(dm.poster_id)];
+          const dmJoined = joinedCounts[dm.id];
+          const dmAppStatus = applicationStatusByProject[dm.id];
+          const dmSkills = dm.skills_needed ?? [];
+          return (
+            <>
+              {/* Banner */}
+              <div className={`relative h-40 flex-shrink-0 flex items-center justify-center bg-gradient-to-br ${getCategoryGradient(dm.focus_area)}`}>
+                <div className="w-14 h-14 rounded-xl bg-white/80 dark:bg-[#0D1F18]/80 backdrop-blur-sm flex items-center justify-center text-[#0F3D2E] dark:text-[#6DD4A8] shadow-sm">
+                  {getCategoryIcon(dm.focus_area)}
+                </div>
+                {dm.type === "urgent" && (
+                  <span className="absolute top-3 right-3 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-semibold uppercase tracking-wide">
+                    <Zap className="w-2.5 h-2.5" />
+                    Urgent
+                  </span>
+                )}
+                <button
+                  onClick={() => setSelectedMission(null)}
+                  className="absolute top-3 left-3 w-8 h-8 flex items-center justify-center rounded-full bg-white/80 dark:bg-[#0D1F18]/80 backdrop-blur-sm text-slate-600 dark:text-[#94C8AF] hover:bg-white dark:hover:bg-[#0D1F18] transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Scrollable body */}
+              <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                {/* Title */}
+                <h2
+                  className="text-2xl font-semibold text-slate-900 dark:text-white leading-snug"
+                  style={{ fontFamily: "'Fraunces', Georgia, serif" }}
+                >
+                  {dm.title}
+                </h2>
+
+                {/* Location · Duration */}
+                <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-[#6B8F7F]">
+                  <MapPin className="w-4 h-4 flex-shrink-0" />
+                  <span>{dm.location || "Remote"}</span>
+                  <span className="text-slate-300 dark:text-[#1E3B34]">·</span>
+                  <Clock className="w-4 h-4 flex-shrink-0" />
+                  <span>{dm.duration || "Flexible"}</span>
+                </div>
+
+                {/* Slot counts */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {(dm.volunteers_needed ?? 0) > 0 && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-sm font-medium">
+                      <Users className="w-3.5 h-3.5" />
+                      {(dmJoined?.volunteers_joined ?? 0)}/{dm.volunteers_needed} volunteers
+                    </span>
+                  )}
+                  {(dm.professionals_needed ?? 0) > 0 && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-sm font-medium">
+                      <Briefcase className="w-3.5 h-3.5" />
+                      {(dmJoined?.professionals_joined ?? 0)}/{dm.professionals_needed} professionals
+                    </span>
+                  )}
+                </div>
+
+                {/* Description */}
+                {dm.description && (
+                  <div>
+                    <p className="text-sm font-medium text-slate-700 dark:text-[#BEEBD7] mb-1">About this mission</p>
+                    <p className="text-sm text-slate-600 dark:text-[#94C8AF] leading-relaxed">{dm.description}</p>
+                  </div>
+                )}
+
+                {/* Skills needed */}
+                {dmSkills.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium text-slate-700 dark:text-[#BEEBD7] mb-2">Skills needed</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {dmSkills.map((skill) => (
+                        <span
+                          key={skill}
+                          className="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-[#1E3B34] text-slate-600 dark:text-[#94C8AF]"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Focus areas */}
+                {(dm.focus_area ?? []).length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium text-slate-700 dark:text-[#BEEBD7] mb-2">Focus areas</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(dm.focus_area ?? []).map((area) => (
+                        <span
+                          key={area}
+                          className="text-xs px-2.5 py-1 rounded-full bg-[#E8F5EF] dark:bg-[#1E3B34] text-[#0F3D2E] dark:text-[#6DD4A8]"
+                        >
+                          {area}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Posted by */}
+                <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-[#6B8F7F]">
+                  <span>Posted by</span>
+                  <span className="font-medium">{dmPosterInfo?.name || "Community"}</span>
+                  {dmPosterInfo?.verified && (
+                    <CheckCircle2 className="w-3 h-3 text-[#2F8F6B] dark:text-[#6DD4A8]" />
+                  )}
+                </div>
+              </div>
+
+              {/* Footer CTA */}
+              <div className="flex-shrink-0 p-4 border-t border-slate-200 dark:border-[#1E3B34]">
+                <Link
+                  to={user ? `/missions/${dm.id}` : "/auth"}
+                  className={`w-full min-h-[48px] flex items-center justify-center gap-2 text-sm font-medium rounded-xl transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] ${
+                    dmAppStatus === "pending"
+                      ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+                      : dmAppStatus === "accepted"
+                      ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+                      : "bg-[#0F3D2E] text-white hover:bg-[#1a5241]"
+                  }`}
+                >
+                  {dmAppStatus === "pending"
+                    ? "Application Pending"
+                    : dmAppStatus === "accepted"
+                    ? "Connected"
+                    : user
+                    ? "View & Apply"
+                    : "Sign in to Apply"}
+                  <ChevronRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </>
+          );
+        })()}
+      </div>
     </div>
   );
 }
