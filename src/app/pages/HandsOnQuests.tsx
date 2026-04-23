@@ -390,14 +390,14 @@ export function HandsOnQuests() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search quests, skills, categories..."
-                className="w-full min-h-[48px] pl-10 pr-4 py-2 border border-slate-200 dark:border-[#1E3B34] bg-white dark:bg-[#0D1F18] rounded-lg text-base sm:text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30 focus:border-[#2F8F6B] transition-all text-slate-900 dark:text-white"
+                className="w-full min-h-[40px] pl-10 pr-4 py-2 border border-slate-200 dark:border-[#1E3B34] bg-white dark:bg-[#0D1F18] rounded-lg text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30 focus:border-[#2F8F6B] transition-all text-slate-900 dark:text-white"
               />
             </div>
             {/* Filters toggle */}
             <button
               type="button"
               onClick={() => setShowFilters((v) => !v)}
-              className="min-h-[48px] px-4 py-2 rounded-lg border border-slate-200 dark:border-[#1E3B34] text-sm font-medium text-slate-700 dark:text-[#BEEBD7] hover:bg-slate-50 dark:hover:bg-[#1E3B34] transition-colors inline-flex items-center justify-center gap-2 w-full md:w-auto"
+              className="min-h-[40px] px-4 py-2 rounded-lg border border-slate-200 dark:border-[#1E3B34] text-sm font-medium text-slate-700 dark:text-[#BEEBD7] hover:bg-slate-50 dark:hover:bg-[#1E3B34] transition-colors inline-flex items-center justify-center gap-2 w-full md:w-auto"
             >
               <Filter className="w-4 h-4" />
               Filters
@@ -406,7 +406,7 @@ export function HandsOnQuests() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as 'recommended' | 'time' | 'points')}
-              className="min-h-[48px] px-3 py-2 border border-slate-200 dark:border-[#1E3B34] rounded-lg text-base sm:text-sm bg-white dark:bg-[#0D1F18] text-slate-700 dark:text-[#BEEBD7] focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30 w-full md:w-auto md:min-w-[10rem]"
+              className="min-h-[40px] px-3 py-2 border border-slate-200 dark:border-[#1E3B34] rounded-lg text-sm bg-white dark:bg-[#0D1F18] text-slate-700 dark:text-[#BEEBD7] focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30 w-full md:w-auto md:min-w-[10rem]"
               aria-label="Sort quests"
             >
               <option value="recommended">Recommended</option>
