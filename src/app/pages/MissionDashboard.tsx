@@ -734,6 +734,14 @@ export function MissionDashboard() {
                     >
                       Apply
                     </button>
+                    {hasActiveFilters && (
+                      <button
+                        onClick={() => { clearAllFilters(); setShowFilters(false); }}
+                        className="w-full py-1.5 text-sm font-medium text-[#2F8F6B] dark:text-[#6DD4A8] hover:underline"
+                      >
+                        Clear all filters
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

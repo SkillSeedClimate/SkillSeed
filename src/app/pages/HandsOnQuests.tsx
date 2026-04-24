@@ -1,6 +1,6 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router';
-import { BookOpen, ChevronRight, Filter, Search, ShieldCheck, Sparkles, RefreshCw, AlertTriangle, Leaf } from 'lucide-react';
+import { BookOpen, ChevronRight, Search, ShieldCheck, SlidersHorizontal, Sparkles, RefreshCw, AlertTriangle, Leaf } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useDemoMode } from '../hooks/useDemoMode';
 import { getCurrentProfile } from '../utils/matchService';
@@ -85,6 +85,18 @@ export function HandsOnQuests() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'not_started' | 'in_progress' | 'submitted' | 'verified' | 'rejected'>('all');
   const [sortBy, setSortBy] = useState<'recommended' | 'time' | 'points'>('recommended');
   const [showFilters, setShowFilters] = useState(false);
+  const filtersDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close filters dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (filtersDropdownRef.current && !filtersDropdownRef.current.contains(e.target as Node)) {
+        setShowFilters(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   // Fetch data
   useEffect(() => {
@@ -468,59 +480,68 @@ export function HandsOnQuests() {
               })()}
             </div>
             {/* Filters toggle */}
-            <button
-              type="button"
-              onClick={() => setShowFilters((v) => !v)}
-              className="min-h-[40px] px-4 py-2 rounded-lg border border-slate-200 dark:border-[#1E3B34] text-sm font-medium text-slate-700 dark:text-[#BEEBD7] hover:bg-slate-50 dark:hover:bg-[#1E3B34] transition-colors inline-flex items-center justify-center gap-2 w-full md:w-auto"
-            >
-              <Filter className="w-4 h-4" />
-              Filters
-            </button>
-            {/* Sort */}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'recommended' | 'time' | 'points')}
-              className="min-h-[40px] px-3 py-2 border border-slate-200 dark:border-[#1E3B34] rounded-lg text-sm bg-white dark:bg-[#0D1F18] text-slate-700 dark:text-[#BEEBD7] focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30 w-full md:w-auto md:min-w-[10rem]"
-              aria-label="Sort quests"
-            >
-              <option value="recommended">Recommended</option>
-              <option value="time">Shortest first</option>
-              <option value="points">Most points</option>
-            </select>
-          </div>
-
-          {/* Expanded filters */}
-          {showFilters && (
-            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-[#1E3B34] flex flex-col sm:flex-row gap-3">
-              <select
-                value={statusFilter}
-                onChange={(e) =>
-                  setStatusFilter(
-                    e.target.value as 'all' | 'not_started' | 'in_progress' | 'submitted' | 'verified' | 'rejected'
-                  )
-                }
-                className="min-h-[48px] px-3 py-2 border border-slate-200 dark:border-[#1E3B34] rounded-lg text-base sm:text-sm bg-white dark:bg-[#0D1F18] text-slate-700 dark:text-[#BEEBD7] focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30 w-full sm:w-auto"
-                aria-label="Status filter"
+            <div ref={filtersDropdownRef} className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowFilters((v) => !v)}
+                className={`min-h-[40px] flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] ${
+                  showFilters
+                    ? "bg-[#0F3D2E] text-white border-transparent"
+                    : "border-slate-200 dark:border-[#1E3B34] text-slate-600 dark:text-[#94C8AF] hover:bg-slate-100 dark:hover:bg-[#1E3B34]"
+                }`}
               >
-                <option value="all">All statuses</option>
-                <option value="not_started">Not started</option>
-                <option value="in_progress">In progress</option>
-                <option value="submitted">Pending review</option>
-                <option value="verified">Completed</option>
-                <option value="rejected">Needs resubmission</option>
-              </select>
-
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={clearAllFilters}
-                  className="min-h-[48px] px-4 py-2 rounded-lg text-sm font-medium text-[#2F8F6B] dark:text-[#6DD4A8] hover:underline inline-flex items-center"
-                >
-                  Clear filters
-                </button>
+                <SlidersHorizontal className="w-4 h-4" />
+                Filters
+              </button>
+              {showFilters && (
+                <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-[#132B23] border border-slate-200 dark:border-[#1E3B34] rounded-xl shadow-lg p-4 z-50 space-y-4">
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 dark:text-[#94C8AF] mb-1.5 block">Sort by</label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as 'recommended' | 'time' | 'points')}
+                      className="w-full px-3 py-2 border border-slate-200 dark:border-[#1E3B34] rounded-lg text-sm bg-white dark:bg-[#0D1F18] text-slate-700 dark:text-[#BEEBD7] focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/50"
+                    >
+                      <option value="recommended">Recommended</option>
+                      <option value="time">Shortest first</option>
+                      <option value="points">Most points</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 dark:text-[#94C8AF] mb-1.5 block">Status</label>
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value as 'all' | 'not_started' | 'in_progress' | 'submitted' | 'verified' | 'rejected')}
+                      className="w-full px-3 py-2 border border-slate-200 dark:border-[#1E3B34] rounded-lg text-sm bg-white dark:bg-[#0D1F18] text-slate-700 dark:text-[#BEEBD7] focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/50"
+                    >
+                      <option value="all">All statuses</option>
+                      <option value="not_started">Not started</option>
+                      <option value="in_progress">In progress</option>
+                      <option value="submitted">Pending review</option>
+                      <option value="verified">Completed</option>
+                      <option value="rejected">Needs resubmission</option>
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setShowFilters(false); }}
+                    className="w-full py-2 bg-[#0F3D2E] text-white text-sm font-medium rounded-lg hover:bg-[#1a5241] transition-colors"
+                  >
+                    Apply
+                  </button>
+                  {hasActiveFilters && (
+                    <button
+                      type="button"
+                      onClick={() => { clearAllFilters(); setShowFilters(false); }}
+                      className="w-full py-1.5 text-sm font-medium text-[#2F8F6B] dark:text-[#6DD4A8] hover:underline"
+                    >
+                      Clear filters
+                    </button>
+                  )}
+                </div>
               )}
             </div>
-          )}
+          </div>
         </div>
 
         {/* ─────────────────────────────────────────────────────────────────────

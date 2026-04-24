@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router";
 import {
   Search,
@@ -306,6 +306,7 @@ export function FundingResources() {
   const [focusFilter, setFocusFilter] = useState("All Focus Areas");
   const [sortBy, setSortBy] = useState<"recommended" | "closing" | "largest" | "newest">("recommended");
   const [showFilters, setShowFilters] = useState(false);
+  const filtersDropdownRef = useRef<HTMLDivElement>(null);
   const [openSection, setOpenSection] = useState<string | null>(null);
   const [selectedOpportunity, setSelectedOpportunity] = useState<FundingOpportunity | null>(null);
 
@@ -332,6 +333,17 @@ export function FundingResources() {
       }
     };
     fetchProfile();
+  }, []);
+
+  // Close filters dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (filtersDropdownRef.current && !filtersDropdownRef.current.contains(e.target as Node)) {
+        setShowFilters(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
   // Fetch opportunities once (avoid loading flashes while typing/searching)
@@ -685,74 +697,71 @@ export function FundingResources() {
               })()}
             </div>
             {/* Filters toggle */}
-            <button
-              onClick={() => setShowFilters((v) => !v)}
-              className="min-h-[40px] px-4 py-2 rounded-lg border border-slate-200 dark:border-[#1E3B34] text-sm font-medium text-slate-700 dark:text-[#BEEBD7] hover:bg-slate-50 dark:hover:bg-[#1E3B34] transition-colors inline-flex items-center gap-2"
-            >
-              <SlidersHorizontal className="w-4 h-4" />
-              Filters
-            </button>
-            {/* Sort */}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as "recommended" | "closing" | "largest" | "newest")}
-              className="min-h-[40px] px-3 py-2 border border-slate-200 dark:border-[#1E3B34] rounded-lg text-sm bg-white dark:bg-[#0D1F18] text-slate-700 dark:text-[#BEEBD7] focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30"
-            >
-              <option value="recommended">Recommended</option>
-              <option value="closing">Closing soon</option>
-              <option value="largest">Largest amount</option>
-              <option value="newest">Newest</option>
-            </select>
-          </div>
-
-          {/* Expanded filters */}
-          {showFilters && (
-            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-[#1E3B34] space-y-3">
-              {/* Type filter chips */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-slate-400 dark:text-[#6B8F7F] mr-1">Type:</span>
-                {TYPES.map(type => (
+            <div ref={filtersDropdownRef} className="relative shrink-0">
+              <button
+                onClick={() => setShowFilters((v) => !v)}
+                className={`min-h-[40px] flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] ${
+                  showFilters
+                    ? "bg-[#0F3D2E] text-white border-transparent"
+                    : "border-slate-200 dark:border-[#1E3B34] text-slate-600 dark:text-[#94C8AF] hover:bg-slate-100 dark:hover:bg-[#1E3B34]"
+                }`}
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                Filters
+              </button>
+              {showFilters && (
+                <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-[#132B23] border border-slate-200 dark:border-[#1E3B34] rounded-xl shadow-lg p-4 z-50 space-y-4">
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 dark:text-[#94C8AF] mb-1.5 block">Sort by</label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as "recommended" | "closing" | "largest" | "newest")}
+                      className="w-full px-3 py-2 border border-slate-200 dark:border-[#1E3B34] rounded-lg text-sm bg-white dark:bg-[#0D1F18] text-slate-700 dark:text-[#BEEBD7] focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/50"
+                    >
+                      <option value="recommended">Recommended</option>
+                      <option value="closing">Closing soon</option>
+                      <option value="largest">Largest amount</option>
+                      <option value="newest">Newest</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 dark:text-[#94C8AF] mb-1.5 block">Type</label>
+                    <select
+                      value={typeFilter}
+                      onChange={(e) => setTypeFilter(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 dark:border-[#1E3B34] rounded-lg text-sm bg-white dark:bg-[#0D1F18] text-slate-700 dark:text-[#BEEBD7] focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/50"
+                    >
+                      {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 dark:text-[#94C8AF] mb-1.5 block">Focus Area</label>
+                    <select
+                      value={focusFilter}
+                      onChange={(e) => setFocusFilter(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 dark:border-[#1E3B34] rounded-lg text-sm bg-white dark:bg-[#0D1F18] text-slate-700 dark:text-[#BEEBD7] focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/50"
+                    >
+                      {FOCUS_FILTERS.map(f => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                  </div>
                   <button
-                    key={type}
-                    onClick={() => setTypeFilter(type)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                      typeFilter === type
-                        ? "bg-[#0F3D2E] text-white"
-                        : "bg-slate-100 dark:bg-[#1E3B34] text-slate-600 dark:text-[#94C8AF] hover:bg-slate-200 dark:hover:bg-[#2F8F6B]/20"
-                    }`}
+                    onClick={() => setShowFilters(false)}
+                    className="w-full py-2 bg-[#0F3D2E] text-white text-sm font-medium rounded-lg hover:bg-[#1a5241] transition-colors"
                   >
-                    {type}
+                    Apply
                   </button>
-                ))}
-              </div>
-              {/* Focus filter chips */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-slate-400 dark:text-[#6B8F7F] mr-1">Focus:</span>
-                {FOCUS_FILTERS.map(area => (
-                  <button
-                    key={area}
-                    onClick={() => setFocusFilter(area)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                      focusFilter === area
-                        ? "bg-[#2F8F6B] text-white"
-                        : "bg-slate-100 dark:bg-[#1E3B34] text-slate-600 dark:text-[#94C8AF] hover:bg-slate-200 dark:hover:bg-[#2F8F6B]/20"
-                    }`}
-                  >
-                    {area}
-                  </button>
-                ))}
-              </div>
-              {/* Clear filters */}
-              {hasActiveFilters && (
-                <button
-                  onClick={clearAllFilters}
-                  className="text-sm font-medium text-[#2F8F6B] dark:text-[#6DD4A8] hover:underline"
-                >
-                  Clear all filters
-                </button>
+                  {hasActiveFilters && (
+                    <button
+                      onClick={() => { clearAllFilters(); setShowFilters(false); }}
+                      className="w-full py-1.5 text-sm font-medium text-[#2F8F6B] dark:text-[#6DD4A8] hover:underline"
+                    >
+                      Clear all filters
+                    </button>
+                  )}
+                </div>
               )}
             </div>
-          )}
+          </div>
         </div>
 
         {/* Results count */}
