@@ -392,7 +392,7 @@ export function HandsOnQuests() {
         {/* ─────────────────────────────────────────────────────────────────────
             Filter Bar (matches Missions pattern)
         ───────────────────────────────────────────────────────────────────── */}
-        <div style={{ animationDelay: '220ms' }} className="animate-slide-in bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
+        <div style={{ animationDelay: '220ms' }} className="animate-slide-in relative z-10 bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
           <div className="flex flex-col md:flex-row gap-3">
             {/* Search */}
             <div className="flex-1 relative">

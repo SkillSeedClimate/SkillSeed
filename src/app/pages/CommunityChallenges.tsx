@@ -798,7 +798,7 @@ export function CommunityChallenges() {
         {/* ─────────────────────────────────────────────────────────────────────
             Full-width Search + Tabs + Filters
         ───────────────────────────────────────────────────────────────────── */}
-        <div style={{ animationDelay: '260ms' }} className="animate-slide-in bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
+        <div style={{ animationDelay: '260ms' }} className="animate-slide-in relative z-10 bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
           <div className="flex items-center gap-2">
             {/* Search input with predictive dropdown */}
             {activeTab !== "feed" ? (
