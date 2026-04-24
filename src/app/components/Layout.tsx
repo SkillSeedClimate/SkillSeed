@@ -19,7 +19,7 @@ export function Layout() {
     <div className="min-h-screen flex flex-col bg-background text-foreground overflow-x-hidden min-w-0">
       <Navbar />
       <Toaster richColors closeButton position="top-center" />
-      {!user && demoMode && <DemoBanner />}
+      {!user && demoMode && location.pathname !== "/" && <DemoBanner />}
       <ScrollToTop />
       <main className="flex-1 min-w-0">
         {isSupabaseConfigured ? <Outlet /> : <ConfigError />}

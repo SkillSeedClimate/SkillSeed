@@ -1,10 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
-import { Menu, X, Sprout, ChevronDown, User, LogOut, Moon, Sun } from "lucide-react";
+import { Menu, X, Sprout, User, LogOut, Moon, Sun } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useDemoMode } from "../hooks/useDemoMode";
 import { useTheme } from "next-themes";
-import { ThemeToggle } from "./ThemeToggle";
 import { cn } from "./ui/utils";
 
 const navLinks = [
@@ -20,12 +19,9 @@ export function Navbar() {
   const { setTheme, resolvedTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -89,7 +85,11 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16 relative">
 
           {/* ── Logo ── */}
-          <Link to="/" className="flex items-center gap-1.5 sm:gap-2 shrink-0 min-h-[44px] min-w-0 pr-1">
+          <Link
+            to="/"
+            onClick={() => { if (demoMode) disableDemoMode(); }}
+            className="flex items-center gap-1.5 sm:gap-2 shrink-0 min-h-[44px] min-w-0 pr-1"
+          >
             <img 
               src="/logo.png" 
               alt="SkillSeed Logo" 
@@ -130,7 +130,15 @@ export function Navbar() {
 
           {/* ── Right Side (desktop) ── */}
           <div className="hidden lg:flex items-center gap-2">
-            {mounted && <ThemeToggle />}
+            {!user && (
+              <button
+                onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                className="w-9 h-9 rounded-full flex items-center justify-center border border-slate-200 dark:border-[#1E3B34] bg-white dark:bg-[#132B23] text-slate-600 dark:text-[#BEEBD7] hover:bg-slate-50 dark:hover:bg-[#1E3B34] transition-colors"
+                aria-label="Toggle theme"
+              >
+                {resolvedTheme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
+            )}
             {user ? (
               /* ── LOGGED IN ── */
               <>
@@ -138,19 +146,9 @@ export function Navbar() {
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setDropdownOpen(!dropdownOpen)}
-                    className={`flex items-center gap-2 pl-1.5 pr-2.5 py-1.5 rounded-xl transition-all min-h-[44px] border-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] ${
-                      dropdownOpen 
-                        ? "border-[#2F8F6B] bg-[#E8F5EF] dark:bg-[#1E3B34]" 
-                        : "border-slate-200 dark:border-[#1E3B34] hover:border-[#2F8F6B]/50 dark:hover:border-[#6DD4A8]/50"
-                    }`}
+                    className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm bg-gradient-to-br from-[#0F3D2E] to-[#2F8F6B] font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] hover:opacity-90 transition-opacity"
                   >
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-sm bg-gradient-to-br from-[#0F3D2E] to-[#2F8F6B] font-bold">
-                      {getAvatarInitials()}
-                    </div>
-                    <span className="text-sm font-medium text-slate-700 dark:text-[#BEEBD7]">
-                      {getUserName().split(" ")[0]}
-                    </span>
-                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 dark:text-[#94C8AF] transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
+                    {getAvatarInitials()}
                   </button>
 
                   {/* Dropdown menu */}
@@ -186,6 +184,31 @@ export function Navbar() {
                         ))}
                       </div>
 
+                      {/* Theme toggle */}
+                      <div className="border-t border-slate-100 dark:border-[#1E3B34] px-4 py-3">
+                        <p className="text-xs font-medium text-slate-400 dark:text-[#6B8F7F] mb-2">Appearance</p>
+                        <div className="flex items-center gap-2">
+                          {[
+                            { id: "light", icon: Sun, label: "Light" },
+                            { id: "dark", icon: Moon, label: "Dark" },
+                          ].map(({ id, icon: Icon, label }) => (
+                            <button
+                              key={id}
+                              onClick={() => setTheme(id)}
+                              className={cn(
+                                "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium border transition-colors",
+                                resolvedTheme === id
+                                  ? "border-[#2F8F6B] bg-[#E8F5EF] dark:bg-[#1E3B34] text-[#0F3D2E] dark:text-[#6DD4A8]"
+                                  : "border-slate-200 dark:border-[#1E3B34] text-slate-500 dark:text-[#6B8F7F] hover:bg-slate-50 dark:hover:bg-[#1E3B34]"
+                              )}
+                            >
+                              <Icon className="w-3.5 h-3.5" />
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
                       {/* Logout */}
                       <div className="border-t border-slate-100 dark:border-[#1E3B34] py-1.5">
                         <button
@@ -203,32 +226,37 @@ export function Navbar() {
             ) : (
               /* ── LOGGED OUT ── */
               <>
-                <button
-                  onClick={demoMode ? () => { disableDemoMode(); navigate("/", { replace: true }); } : handleTryDemo}
-                  className="min-h-[40px] px-4 py-2 rounded-lg text-sm font-semibold border border-slate-200 dark:border-[#1E3B34] bg-white/70 dark:bg-[#132B23] text-slate-700 dark:text-[#BEEBD7] hover:bg-white dark:hover:bg-[#17342B] transition-colors"
-                >
-                  {demoMode ? "Exit demo" : "Try demo"}
-                </button>
-                <button
-                  onClick={() => navigate("/auth?tab=login")}
-                  className="min-h-[40px] px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted dark:hover:bg-[#17342B] transition-colors"
-                >
-                  Log In
-                </button>
-                <button
-                  onClick={() => navigate("/auth?tab=signup")}
-                  className="min-h-[40px] px-5 py-2 rounded-lg text-white text-sm font-semibold bg-[linear-gradient(135deg,#0F3D2E_0%,#2F8F6B_100%)] shadow-sm shadow-[#2F8F6B]/25 hover:shadow-md hover:shadow-[#2F8F6B]/30 transition-all flex items-center gap-1.5 active:scale-[0.98]"
-                >
-                  <Sprout className="w-3.5 h-3.5" />
-                  Sign Up
-                </button>
+                {!demoMode && (
+                  <button
+                    onClick={handleTryDemo}
+                    className="min-h-[40px] px-4 py-2 rounded-lg text-sm font-semibold border border-slate-200 dark:border-[#1E3B34] bg-white/70 dark:bg-[#132B23] text-slate-700 dark:text-[#BEEBD7] hover:bg-white dark:hover:bg-[#17342B] transition-colors"
+                  >
+                    Try demo
+                  </button>
+                )}
+                {!demoMode && (
+                  <>
+                    <button
+                      onClick={() => navigate("/auth?tab=login")}
+                      className="min-h-[40px] px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted dark:hover:bg-[#17342B] transition-colors"
+                    >
+                      Log In
+                    </button>
+                    <button
+                      onClick={() => navigate("/auth?tab=signup")}
+                      className="min-h-[40px] px-5 py-2 rounded-lg text-white text-sm font-semibold bg-[linear-gradient(135deg,#0F3D2E_0%,#2F8F6B_100%)] shadow-sm shadow-[#2F8F6B]/25 hover:shadow-md hover:shadow-[#2F8F6B]/30 transition-all flex items-center gap-1.5 active:scale-[0.98]"
+                    >
+                      <Sprout className="w-3.5 h-3.5" />
+                      Sign Up
+                    </button>
+                  </>
+                )}
               </>
             )}
           </div>
 
           {/* ── Mobile controls ── */}
           <div className="lg:hidden flex items-center gap-0.5 shrink-0">
-            {mounted && <ThemeToggle />}
             <button
               type="button"
               onClick={() => setMobileOpen(!mobileOpen)}
