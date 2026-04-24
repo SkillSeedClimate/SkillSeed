@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Link } from "react-router";
 import {
   Trophy,
@@ -18,7 +18,7 @@ import {
   Loader2,
   Camera,
   Search,
-  Filter,
+  SlidersHorizontal,
   X,
   AlertCircle,
   RefreshCw,
@@ -45,8 +45,6 @@ import {
   fetchCommunityFeed,
   fetchUserLikedSubmissions,
   subscribeToFeed,
-  resetMyChallengeSubmissions,
-  deleteMyCreatedChallenges,
 } from "../utils/challengeService";
 import { CreateChallengeModal } from "../components/CreateChallengeModal";
 import { SubmissionModal } from "../components/SubmissionModal";
@@ -305,12 +303,13 @@ export function CommunityChallenges() {
   const [categoryFilter, setCategoryFilter] = useState<string>("All");
   const [levelFilter, setLevelFilter] = useState<string>("All");
   const [sortBy, setSortBy] = useState<"trending" | "ending_soon" | "newest">("trending");
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [submissionModalOpen, setSubmissionModalOpen] = useState(false);
   const [selectedChallengeForSubmission, setSelectedChallengeForSubmission] = useState<Challenge | null>(null);
-  const [resettingMySubmissions, setResettingMySubmissions] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const filtersDropdownRef = useRef<HTMLDivElement>(null);
 
   const challengeById = useMemo(() => {
     const map = new Map<string, Challenge>();
@@ -394,6 +393,17 @@ export function CommunityChallenges() {
       setLeaderboardLoading(false);
     }
   }, [userProfileId]);
+
+  // Close filters dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (filtersDropdownRef.current && !filtersDropdownRef.current.contains(e.target as Node)) {
+        setShowFilters(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   // Real-time subscriptions
   useEffect(() => {
@@ -504,32 +514,6 @@ export function CommunityChallenges() {
     void fetchData();
   };
 
-  const handleResetMyChallengeProgress = async () => {
-    if (!userProfileId) return;
-    const ok = window.confirm(
-      "Delete community challenges you created, leave challenges you finished (removes them from your profile), delete your feed posts, and reset counts so you can demo again?",
-    );
-    if (!ok) return;
-    setResettingMySubmissions(true);
-    setError(null);
-    try {
-      const deletedCreated = await deleteMyCreatedChallenges(userProfileId);
-      const { deletedSubmissions, removedParticipations } = await resetMyChallengeSubmissions(userProfileId);
-      await fetchData();
-      if (deletedCreated === 0 && deletedSubmissions === 0 && removedParticipations === 0) {
-        window.alert(
-          "Nothing to reset — you have no posted challenges, no completed challenges to leave, and no feed posts.",
-        );
-      }
-    } catch (err) {
-      console.error("Error resetting submissions:", err);
-      setError(
-        "Could not reset your challenges. Check you are signed in and that your Supabase policies allow deleting your challenges, challenge_participants, and challenge_submissions.",
-      );
-    } finally {
-      setResettingMySubmissions(false);
-    }
-  };
 
   // Get challenge status for a user
   const getChallengeStatus = (challengeId: string): "not-joined" | "joined" | "completed" => {
@@ -808,6 +792,185 @@ export function CommunityChallenges() {
         </div>
 
         {/* ─────────────────────────────────────────────────────────────────────
+            Full-width Search + Tabs + Filters
+        ───────────────────────────────────────────────────────────────────── */}
+        <div className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
+          <div className="flex items-center gap-2">
+            {/* Search input with predictive dropdown */}
+            {activeTab !== "feed" ? (
+              <div className="flex-1 relative">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search challenges, skills, categories..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onFocus={() => setSearchFocused(true)}
+                  onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+                  onKeyDown={(e) => { if (e.key === "Escape") { setSearchFocused(false); (e.target as HTMLInputElement).blur(); } }}
+                  className="w-full min-h-[40px] pl-10 pr-4 py-2 border border-slate-200 dark:border-[#1E3B34] bg-slate-50 dark:bg-[#0D1F18] rounded-lg text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30 focus:border-[#2F8F6B] transition-all text-slate-900 dark:text-white"
+                />
+                {searchFocused && (() => {
+                  const SUGGESTED_SKILLS = ["GIS Mapping", "Solar Installation", "Community Organising", "Teaching", "Forestry"];
+                  const BROWSE_CATEGORIES = ["All", "Renewable Energy", "Education", "Disaster Response", "Urban Planning", "Conservation", "Waste Reduction"];
+                  const predictive = search.length > 0
+                    ? challenges.filter((c) =>
+                        c.title.toLowerCase().includes(search.toLowerCase()) ||
+                        (c.category ?? "").toLowerCase().includes(search.toLowerCase()) ||
+                        (c.difficulty ?? "").toLowerCase().includes(search.toLowerCase())
+                      ).slice(0, 5)
+                    : [];
+                  return (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#132B23] border border-slate-200 dark:border-[#1E3B34] rounded-xl shadow-lg p-3 z-50 max-h-80 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-150">
+                      {search.length > 0 ? (
+                        predictive.length > 0 ? (
+                          <div className="space-y-0.5">
+                            {predictive.map((c) => (
+                              <button
+                                key={c.id}
+                                onClick={() => { setSearch(c.title); setSearchFocused(false); }}
+                                className="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-[#1E3B34] text-left transition-colors"
+                              >
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{c.title}</p>
+                                  <p className="text-xs text-slate-400 dark:text-[#6B8F7F] truncate">
+                                    {c.category || "General"}{c.difficulty ? ` · ${c.difficulty}` : ""}
+                                  </p>
+                                </div>
+                                <ChevronRight className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-slate-400 dark:text-[#6B8F7F] px-3 py-2">No challenges match "{search}"</p>
+                        )
+                      ) : (
+                        <div className="space-y-4">
+                          <div>
+                            <p className="text-[10px] font-semibold text-slate-400 dark:text-[#6B8F7F] uppercase tracking-wide mb-2 px-1">Suggested Skills</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {SUGGESTED_SKILLS.map((skill) => (
+                                <button
+                                  key={skill}
+                                  onClick={() => { setSearch(skill); setSearchFocused(false); }}
+                                  className="text-xs px-3 py-1.5 rounded-full bg-slate-100 dark:bg-[#1E3B34] text-slate-600 dark:text-[#94C8AF] hover:bg-[#E8F5EF] dark:hover:bg-[#0F3D2E]/50 transition-colors"
+                                >
+                                  {skill}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-semibold text-slate-400 dark:text-[#6B8F7F] uppercase tracking-wide mb-2 px-1">Browse by Category</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {BROWSE_CATEGORIES.map((cat) => (
+                                <button
+                                  key={cat}
+                                  onClick={() => { setCategoryFilter(cat); setSearchFocused(false); }}
+                                  className={`text-xs px-3 py-1.5 rounded-full transition-colors ${
+                                    categoryFilter === cat
+                                      ? "bg-[#0F3D2E] text-white"
+                                      : "bg-slate-100 dark:bg-[#1E3B34] text-slate-600 dark:text-[#94C8AF] hover:bg-[#E8F5EF] dark:hover:bg-[#0F3D2E]/50"
+                                  }`}
+                                >
+                                  {cat}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : (
+              <div className="flex-1" />
+            )}
+
+            {/* Tabs */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {(["all", "joined", "feed"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`min-h-[40px] px-3 py-1.5 rounded-lg border text-sm font-medium whitespace-nowrap transition-colors focus:outline-none ${
+                    activeTab === tab
+                      ? "bg-[#0F3D2E] text-white border-transparent"
+                      : "border-slate-200 dark:border-[#1E3B34] text-slate-500 dark:text-[#6B8F7F] hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#1E3B34]"
+                  }`}
+                >
+                  {tab === "all" ? "All" : tab === "joined" ? "Joined" : "Feed"}
+                </button>
+              ))}
+            </div>
+
+            {/* Filters button + dropdown */}
+            {activeTab !== "feed" && (
+              <div ref={filtersDropdownRef} className="relative shrink-0">
+                <button
+                  onClick={() => setShowFilters((v) => !v)}
+                  className={`min-h-[40px] flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] ${
+                    showFilters
+                      ? "bg-[#0F3D2E] text-white border-transparent"
+                      : "border-slate-200 dark:border-[#1E3B34] text-slate-600 dark:text-[#94C8AF] hover:bg-slate-100 dark:hover:bg-[#1E3B34]"
+                  }`}
+                >
+                  <SlidersHorizontal className="w-4 h-4" />
+                  Filters
+                </button>
+                {showFilters && (
+                  <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-[#132B23] border border-slate-200 dark:border-[#1E3B34] rounded-xl shadow-lg p-4 z-50 space-y-4">
+                    <div>
+                      <label className="text-xs font-medium text-slate-500 dark:text-[#94C8AF] mb-1.5 block">Category</label>
+                      <select
+                        value={categoryFilter}
+                        onChange={(e) => setCategoryFilter(e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-200 dark:border-[#1E3B34] rounded-lg text-sm bg-white dark:bg-[#0D1F18] text-slate-700 dark:text-[#BEEBD7] focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/50"
+                      >
+                        {categories.map((c) => (
+                          <option key={c} value={c}>{c === "All" ? "All Categories" : c}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-slate-500 dark:text-[#94C8AF] mb-1.5 block">Level</label>
+                      <select
+                        value={levelFilter}
+                        onChange={(e) => setLevelFilter(e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-200 dark:border-[#1E3B34] rounded-lg text-sm bg-white dark:bg-[#0D1F18] text-slate-700 dark:text-[#BEEBD7] focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/50"
+                      >
+                        {levels.map((l) => (
+                          <option key={l} value={l}>{l === "All" ? "All Levels" : l}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-slate-500 dark:text-[#94C8AF] mb-1.5 block">Sort by</label>
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                        className="w-full px-3 py-2 border border-slate-200 dark:border-[#1E3B34] rounded-lg text-sm bg-white dark:bg-[#0D1F18] text-slate-700 dark:text-[#BEEBD7] focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/50"
+                      >
+                        <option value="trending">Trending</option>
+                        <option value="ending_soon">Ending soon</option>
+                        <option value="newest">Newest</option>
+                      </select>
+                    </div>
+                    <button
+                      onClick={() => setShowFilters(false)}
+                      className="w-full py-2 bg-[#0F3D2E] text-white text-sm font-medium rounded-lg hover:bg-[#1a5241] transition-colors"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ─────────────────────────────────────────────────────────────────────
             Main Content Grid
         ───────────────────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -815,104 +978,6 @@ export function CommunityChallenges() {
               LEFT COLUMN - Challenges
           ══════════════════════════════════════════════════════════════════════════════ */}
           <div className="lg:col-span-2 space-y-5">
-            {/* Tabs */}
-            <div className="flex items-center gap-1 bg-white dark:bg-[#132B23] rounded-lg border border-slate-200 dark:border-[#1E3B34] p-1 w-fit">
-              {(["all", "joined", "feed"] as const).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors min-h-[36px] ${
-                    activeTab === tab
-                      ? "bg-[#0F3D2E] text-white"
-                      : "text-slate-600 dark:text-[#94C8AF] hover:bg-slate-100 dark:hover:bg-[#1E3B34]"
-                  }`}
-                >
-                  {tab === "all" ? "All" : tab === "joined" ? `Joined (${joinedChallengeIds.size})` : `Feed (${feedItems.length})`}
-                </button>
-              ))}
-            </div>
-            {user && userProfileId ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-slate-500 dark:text-[#94C8AF]">Demo / redo</span>
-                <button
-                  type="button"
-                  disabled={resettingMySubmissions}
-                  onClick={handleResetMyChallengeProgress}
-                  title="Leave joined challenges, remove feed posts, and join again"
-                  className="inline-flex items-center justify-center px-3 py-2 rounded-lg text-xs font-semibold border border-slate-200 dark:border-[#1E3B34] bg-white dark:bg-[#132B23] text-slate-700 dark:text-[#BEEBD7] hover:bg-slate-50 dark:hover:bg-[#1E3B34] hover:border-[#2F8F6B]/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B]/40 disabled:opacity-50 disabled:pointer-events-none transition-colors min-h-[36px]"
-                >
-                  {resettingMySubmissions ? "Resetting…" : "Reset demo"}
-                </button>
-              </div>
-            ) : null}
-
-            {/* Search & Filters - Mobile */}
-            {activeTab !== "feed" && (
-              <>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                      type="text"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Search challenges..."
-                      className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 dark:border-[#1E3B34] bg-white dark:bg-[#132B23] text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30 focus:border-[#2F8F6B] min-h-[44px]"
-                    />
-                  </div>
-                  <button
-                    onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
-                    className={`md:hidden px-3 py-2.5 rounded-lg border transition-colors min-h-[44px] ${
-                      hasActiveFilters
-                        ? "border-[#2F8F6B] bg-[#E6F4EE] dark:bg-[#1E3B34] text-[#0F3D2E] dark:text-[#6DD4A8]"
-                        : "border-slate-200 dark:border-[#1E3B34] bg-white dark:bg-[#132B23] text-slate-600 dark:text-[#94C8AF]"
-                    }`}
-                  >
-                    <Filter className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {/* Filters - Desktop inline, Mobile drawer */}
-                <div className={`${mobileFiltersOpen ? "block" : "hidden"} md:flex md:flex-wrap items-center gap-2`}>
-                  <select
-                    value={categoryFilter}
-                    onChange={(e) => setCategoryFilter(e.target.value)}
-                    className="px-3 py-2 rounded-lg border border-slate-200 dark:border-[#1E3B34] bg-white dark:bg-[#132B23] text-sm text-slate-700 dark:text-[#BEEBD7] focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30 min-h-[40px]"
-                  >
-                    {categories.map((c) => (
-                      <option key={c} value={c}>{c === "All" ? "All Categories" : c}</option>
-                    ))}
-                  </select>
-                  <select
-                    value={levelFilter}
-                    onChange={(e) => setLevelFilter(e.target.value)}
-                    className="px-3 py-2 rounded-lg border border-slate-200 dark:border-[#1E3B34] bg-white dark:bg-[#132B23] text-sm text-slate-700 dark:text-[#BEEBD7] focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30 min-h-[40px]"
-                  >
-                    {levels.map((l) => (
-                      <option key={l} value={l}>{l === "All" ? "All Levels" : l}</option>
-                    ))}
-                  </select>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                    className="px-3 py-2 rounded-lg border border-slate-200 dark:border-[#1E3B34] bg-white dark:bg-[#132B23] text-sm text-slate-700 dark:text-[#BEEBD7] focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30 min-h-[40px]"
-                  >
-                    <option value="trending">Trending</option>
-                    <option value="ending_soon">Ending soon</option>
-                    <option value="newest">Newest</option>
-                  </select>
-                  {hasActiveFilters && (
-                    <button
-                      onClick={clearFilters}
-                      className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-[#2F8F6B] hover:text-[#0F3D2E] dark:hover:text-[#6DD4A8] transition-colors"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                      Clear
-                    </button>
-                  )}
-                </div>
-              </>
-            )}
 
             {/* ══════════����════════════════════════════════════��══════════════════════════════
                 CHALLENGE LIST
