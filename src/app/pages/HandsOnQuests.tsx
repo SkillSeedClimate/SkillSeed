@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router';
-import { BookOpen, ChevronRight, Search, ShieldCheck, SlidersHorizontal, Sparkles, RefreshCw, AlertTriangle, Leaf } from 'lucide-react';
+import { ChevronRight, Search, ShieldCheck, SlidersHorizontal, Sparkles, RefreshCw, AlertTriangle, Leaf } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useDemoMode } from '../hooks/useDemoMode';
 import { getCurrentProfile } from '../utils/matchService';
@@ -12,7 +12,6 @@ import {
   startQuest
 } from '../utils/questService';
 import { QuestCard } from '../components/QuestCard';
-import { GridSkeleton } from '../components/ui/loading-skeleton';
 import { EmptyState } from '../components/ui/empty-state';
 import type { Profile, Quest, QuestProgress } from '../types/database';
 import { useShowBlockingFullPageLoader } from '../hooks/useShowBlockingFullPageLoader';
@@ -307,7 +306,7 @@ export function HandsOnQuests() {
       {/* ─────────────────────────────────────────────────────────────────────
           Page Header (matches Missions pattern)
       ───────────────────────────────────────────────────────────────────── */}
-      <header className="bg-white dark:bg-[#132B23] border-b border-slate-200 dark:border-[#1E3B34]">
+      <header className="animate-slide-down bg-white dark:bg-[#132B23] border-b border-slate-200 dark:border-[#1E3B34]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -339,7 +338,7 @@ export function HandsOnQuests() {
         <div className="grid grid-cols-1 min-[400px]:grid-cols-3 gap-2 sm:gap-3 px-0.5 sm:px-0">
           <button
             onClick={() => setActiveTab('beginner')}
-            className={`text-left bg-white dark:bg-[#132B23] rounded-xl border p-3 sm:p-4 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] min-h-[44px] ${
+            className={`animate-slide-in btn-pop text-left bg-white dark:bg-[#132B23] rounded-xl border p-3 sm:p-4 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] min-h-[44px] ${
               activeTab === 'beginner' 
                 ? 'border-[#2F8F6B] dark:border-[#6DD4A8]' 
                 : 'border-slate-200 dark:border-[#1E3B34] hover:border-[#2F8F6B]/50'
@@ -350,7 +349,8 @@ export function HandsOnQuests() {
           </button>
           <button
             onClick={() => setActiveTab('advanced')}
-            className={`text-left bg-white dark:bg-[#132B23] rounded-xl border p-3 sm:p-4 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 min-h-[44px] ${
+            style={{ animationDelay: '70ms' }}
+            className={`animate-slide-in btn-pop text-left bg-white dark:bg-[#132B23] rounded-xl border p-3 sm:p-4 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 min-h-[44px] ${
               activeTab === 'advanced' 
                 ? 'border-amber-400 dark:border-amber-500' 
                 : 'border-slate-200 dark:border-[#1E3B34] hover:border-amber-300'
@@ -362,7 +362,8 @@ export function HandsOnQuests() {
           {user ? (
             <button
               onClick={() => setActiveTab('my-quests')}
-              className={`text-left bg-white dark:bg-[#132B23] rounded-xl border p-3 sm:p-4 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] min-h-[44px] ${
+              style={{ animationDelay: '140ms' }}
+              className={`animate-slide-in btn-pop text-left bg-white dark:bg-[#132B23] rounded-xl border p-3 sm:p-4 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] min-h-[44px] ${
                 activeTab === 'my-quests' 
                   ? 'border-[#2F8F6B] dark:border-[#6DD4A8]' 
                   : 'border-slate-200 dark:border-[#1E3B34] hover:border-[#2F8F6B]/50'
@@ -381,7 +382,7 @@ export function HandsOnQuests() {
               </p>
             </button>
           ) : (
-            <div className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-3 sm:p-4 min-h-[44px]">
+            <div style={{ animationDelay: '140ms' }} className="animate-slide-in bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-3 sm:p-4 min-h-[44px]">
               <p className="text-xs text-slate-500 dark:text-[#94C8AF] font-medium mb-1">Badges Earned</p>
               <p className="text-2xl font-bold text-slate-900 dark:text-white">{userBadgeCount}</p>
             </div>
@@ -391,7 +392,7 @@ export function HandsOnQuests() {
         {/* ─────────────────────────────────────────────────────────────────────
             Filter Bar (matches Missions pattern)
         ───────────────────────────────────────────────────────────────────── */}
-        <div className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
+        <div style={{ animationDelay: '220ms' }} className="animate-slide-in bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
           <div className="flex flex-col md:flex-row gap-3">
             {/* Search */}
             <div className="flex-1 relative">
@@ -571,13 +572,14 @@ export function HandsOnQuests() {
           )
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {myQuestsWithProgress.map(({ quest, progress }) => (
-              <QuestCard
-                key={quest.id}
-                quest={quest}
-                progress={progress}
-                onStart={handleStartQuest}
-              />
+            {myQuestsWithProgress.map(({ quest, progress }, index) => (
+              <div key={quest.id} style={{ animationDelay: `${Math.min(500, 300 + index * 50)}ms`, '--card-delay': `${Math.min(500, 300 + index * 50)}ms` } as React.CSSProperties} className="animate-slide-in">
+                <QuestCard
+                  quest={quest}
+                  progress={progress}
+                  onStart={handleStartQuest}
+                />
+              </div>
             ))}
           </div>
         )}

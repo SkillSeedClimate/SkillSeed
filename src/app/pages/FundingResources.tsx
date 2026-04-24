@@ -256,7 +256,7 @@ function FundingCard({
         )}
 
         {/* Actions */}
-        <div className="flex gap-2">
+        <div className="animate-btn-entrance flex gap-2" style={{ animationDelay: 'calc(var(--card-delay, 0ms) + 320ms)' }}>
           {isOwner ? (
             <button
               onClick={() => onEdit?.(opportunity.id)}
@@ -543,7 +543,7 @@ export function FundingResources() {
       {/* ─────────────────────────────────────────────────────────────────────
           Page Header (matches Missions pattern)
       ───────────────────────────────────────────────────────────────────── */}
-      <header className="bg-white dark:bg-[#132B23] border-b border-slate-200 dark:border-[#1E3B34]">
+      <header className="animate-slide-down bg-white dark:bg-[#132B23] border-b border-slate-200 dark:border-[#1E3B34]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -578,13 +578,14 @@ export function FundingResources() {
             KPI Strip (matches Missions pattern)
         ───────────────────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
+          <div className="animate-slide-in bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
             <p className="text-xs text-slate-500 dark:text-[#94C8AF] font-medium mb-1">Total Opportunities</p>
             <p className="text-2xl font-bold text-slate-900 dark:text-white">{opportunities.length}</p>
           </div>
           <button
             onClick={() => setSortBy("closing")}
-            className={`text-left bg-white dark:bg-[#132B23] rounded-xl border p-4 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
+            style={{ animationDelay: '70ms' }}
+            className={`animate-slide-in btn-pop text-left bg-white dark:bg-[#132B23] rounded-xl border p-4 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
               sortBy === "closing" ? "border-amber-400" : "border-slate-200 dark:border-[#1E3B34] hover:border-amber-300"
             }`}
           >
@@ -594,7 +595,7 @@ export function FundingResources() {
             </p>
             <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{closingSoonCount}</p>
           </button>
-          <div className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
+          <div style={{ animationDelay: '140ms' }} className="animate-slide-in bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
             <p className="text-xs text-slate-500 dark:text-[#94C8AF] font-medium mb-1 flex items-center gap-1">
               <Users className="w-3 h-3" />
               Community Posted
@@ -606,7 +607,7 @@ export function FundingResources() {
         {/* ─────────────────────────────────────────────────────────────────────
             Filter Bar (matches Missions pattern)
         ───────────────────────────────────────────────────────────────────── */}
-        <div className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
+        <div style={{ animationDelay: '220ms' }} className="animate-slide-in bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
           <div className="flex flex-col md:flex-row gap-3">
             {/* Search */}
             <div className="flex-1 relative">
@@ -798,16 +799,17 @@ export function FundingResources() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {displayedOpportunities.map(opportunity => (
-              <FundingCard
-                key={opportunity.id}
-                opportunity={opportunity}
-                currentProfileId={currentProfile?.id ?? null}
-                isSaved={savedIds.includes(opportunity.id)}
-                onToggleSave={handleToggleSave}
-                onViewDetails={setSelectedOpportunity}
-                onEdit={id => navigate(`/edit-funding/${id}`)}
-              />
+            {displayedOpportunities.map((opportunity, index) => (
+              <div key={opportunity.id} style={{ animationDelay: `${Math.min(500, 300 + index * 50)}ms`, '--card-delay': `${Math.min(500, 300 + index * 50)}ms` } as React.CSSProperties} className="animate-slide-in">
+                <FundingCard
+                  opportunity={opportunity}
+                  currentProfileId={currentProfile?.id ?? null}
+                  isSaved={savedIds.includes(opportunity.id)}
+                  onToggleSave={handleToggleSave}
+                  onViewDetails={setSelectedOpportunity}
+                  onEdit={id => navigate(`/edit-funding/${id}`)}
+                />
+              </div>
             ))}
           </div>
         )}

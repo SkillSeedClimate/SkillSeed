@@ -1,5 +1,54 @@
 @custom-variant dark (&:is(.dark *));
 
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-slide-in { animation: none; }
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-down {
+  animation: slide-down 0.35s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-slide-down { animation: none; }
+}
+
+@keyframes btn-entrance {
+  from { opacity: 0; transform: translateY(6px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-btn-entrance {
+  animation: btn-entrance 0.22s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-btn-entrance { animation: none; }
+}
+
+@keyframes btn-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(0.94); }
+  100% { transform: scale(1); }
+}
+
+.btn-pop:active {
+  animation: btn-pop 0.18s ease-out both;
+}
+
 :root {
   /* SkillSeed Brand Tokens */
   --ss-forest: #0F3D2E;

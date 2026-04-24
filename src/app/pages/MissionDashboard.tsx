@@ -522,7 +522,7 @@ export function MissionDashboard() {
       {/* ─────────────────────────────────────────────────────────────────────
           Page Header
       ───────────────────────────────────────────────────────────────────── */}
-      <header className="bg-white dark:bg-[#132B23] border-b border-slate-200 dark:border-[#1E3B34]">
+      <header className="animate-slide-down bg-white dark:bg-[#132B23] border-b border-slate-200 dark:border-[#1E3B34]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -550,14 +550,15 @@ export function MissionDashboard() {
         <div className="grid grid-cols-3 gap-3">
           <button
             onClick={() => { setUrgentOnly(false); clearAllFilters(); }}
-            className="text-left bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4 hover:border-[#2F8F6B]/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B]"
+            className="animate-slide-in btn-pop text-left bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4 hover:border-[#2F8F6B]/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B]"
           >
             <p className="text-xs text-slate-500 dark:text-[#94C8AF] font-medium mb-1">Open Missions</p>
             <p className="text-2xl font-bold text-slate-900 dark:text-white">{sorted.length}</p>
           </button>
           <button
             onClick={() => setUrgentOnly(true)}
-            className="text-left bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4 hover:border-red-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+            style={{ animationDelay: '70ms' }}
+            className="animate-slide-in btn-pop text-left bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4 hover:border-red-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
           >
             <p className="text-xs text-slate-500 dark:text-[#94C8AF] font-medium mb-1 flex items-center gap-1">
               <Zap className="w-3 h-3 text-red-500" />
@@ -565,7 +566,7 @@ export function MissionDashboard() {
             </p>
             <p className="text-2xl font-bold text-red-600 dark:text-red-400">{urgent.length}</p>
           </button>
-          <div className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
+          <div style={{ animationDelay: '140ms' }} className="animate-slide-in bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
             <p className="text-xs text-slate-500 dark:text-[#94C8AF] font-medium mb-1">My Applications</p>
             <p className="text-2xl font-bold text-slate-900 dark:text-white">{pendingApplicationsCount}</p>
           </div>
@@ -575,7 +576,7 @@ export function MissionDashboard() {
             Tab Bar
         ───────────────────────────────────────────────────────────────────── */}
         {/* Search bar: input | tabs | filters — all in one container */}
-        <div className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
+        <div style={{ animationDelay: '220ms' }} className="animate-slide-in bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
           <div className="flex items-center gap-2">
             {/* Search input */}
             {workTab !== "my_projects" ? (
@@ -826,7 +827,7 @@ export function MissionDashboard() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {sorted.map((mission) => {
+                {sorted.map((mission, index) => {
                   const isOwner = user && String(mission.poster_id) === String(user.id);
                   const posterInfo = posterVerifiedByUserId[String(mission.poster_id)];
                   const joined = joinedCounts[mission.id];
@@ -840,7 +841,8 @@ export function MissionDashboard() {
                     <article
                       key={mission.id}
                       onClick={() => setSelectedMission(mission)}
-                      className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] overflow-hidden hover:border-[#2F8F6B]/50 hover:shadow-md transition-shadow duration-200 flex flex-col group cursor-pointer"
+                      style={{ animationDelay: `${Math.min(500, 300 + index * 50)}ms`, '--card-delay': `${Math.min(500, 300 + index * 50)}ms` } as React.CSSProperties}
+                      className="animate-slide-in bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] overflow-hidden hover:border-[#2F8F6B]/50 hover:shadow-md transition-shadow duration-200 flex flex-col group cursor-pointer"
                     >
                       {/* Card header with icon */}
                       <div
@@ -935,7 +937,8 @@ export function MissionDashboard() {
                         {/* CTA */}
                         <button
                           onClick={(e) => { e.stopPropagation(); setSelectedMission(mission); }}
-                          className={`w-full min-h-[44px] flex items-center justify-center gap-1.5 text-sm font-medium rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] ${
+                          style={{ animationDelay: 'calc(var(--card-delay, 0ms) + 320ms)' }}
+                          className={`animate-btn-entrance w-full min-h-[44px] flex items-center justify-center gap-1.5 text-sm font-medium rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] ${
                             isOwner
                               ? "border border-[#2F8F6B] text-[#0F3D2E] dark:text-[#6DD4A8] hover:bg-[#E8F5EF] dark:hover:bg-[#1E3B34]"
                               : appStatus === "pending"
