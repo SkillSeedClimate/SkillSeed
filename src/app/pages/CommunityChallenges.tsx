@@ -623,9 +623,10 @@ export function CommunityChallenges() {
     setCategoryFilter("All");
     setLevelFilter("All");
     setSortBy("trending");
+    setActiveTab("all");
   };
 
-  const hasActiveFilters = search || categoryFilter !== "All" || levelFilter !== "All" || sortBy !== "trending";
+  const hasActiveFilters = search || categoryFilter !== "All" || levelFilter !== "All" || sortBy !== "trending" || activeTab !== "all";
 
   // ══════════════════════════════════════════════════════════════════════════════
   // LOADING STATE
@@ -888,26 +889,8 @@ export function CommunityChallenges() {
               <div className="flex-1" />
             )}
 
-            {/* Tabs */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {(["all", "joined", "feed"] as const).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`min-h-[40px] px-3 py-1.5 rounded-lg border text-sm font-medium whitespace-nowrap transition-colors focus:outline-none ${
-                    activeTab === tab
-                      ? "bg-[#0F3D2E] text-white border-transparent"
-                      : "border-slate-200 dark:border-[#1E3B34] text-slate-500 dark:text-[#6B8F7F] hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#1E3B34]"
-                  }`}
-                >
-                  {tab === "all" ? "All" : tab === "joined" ? "Joined" : "Feed"}
-                </button>
-              ))}
-            </div>
-
             {/* Filters button + dropdown */}
-            {activeTab !== "feed" && (
-              <div ref={filtersDropdownRef} className="relative shrink-0">
+            <div ref={filtersDropdownRef} className="relative shrink-0">
                 <button
                   onClick={() => setShowFilters((v) => !v)}
                   className={`min-h-[40px] flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F8F6B] ${
@@ -921,6 +904,18 @@ export function CommunityChallenges() {
                 </button>
                 {showFilters && (
                   <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-[#132B23] border border-slate-200 dark:border-[#1E3B34] rounded-xl shadow-lg p-4 z-50 space-y-4">
+                    <div>
+                      <label className="text-xs font-medium text-slate-500 dark:text-[#94C8AF] mb-1.5 block">View</label>
+                      <select
+                        value={activeTab}
+                        onChange={(e) => setActiveTab(e.target.value as "all" | "joined" | "feed")}
+                        className="w-full px-3 py-2 border border-slate-200 dark:border-[#1E3B34] rounded-lg text-sm bg-white dark:bg-[#0D1F18] text-slate-700 dark:text-[#BEEBD7] focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/50"
+                      >
+                        <option value="all">All</option>
+                        <option value="joined">Joined</option>
+                        <option value="feed">Feed</option>
+                      </select>
+                    </div>
                     <div>
                       <label className="text-xs font-medium text-slate-500 dark:text-[#94C8AF] mb-1.5 block">Category</label>
                       <select
@@ -963,10 +958,17 @@ export function CommunityChallenges() {
                     >
                       Apply
                     </button>
+                    {hasActiveFilters && (
+                      <button
+                        onClick={() => { clearFilters(); setShowFilters(false); }}
+                        className="w-full py-1.5 text-sm font-medium text-[#2F8F6B] dark:text-[#6DD4A8] hover:underline"
+                      >
+                        Clear all filters
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
-            )}
           </div>
         </div>
 
