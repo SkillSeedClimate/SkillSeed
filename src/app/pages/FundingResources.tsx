@@ -301,6 +301,7 @@ function FundingCard({
 export function FundingResources() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
   const [typeFilter, setTypeFilter] = useState("All");
   const [focusFilter, setFocusFilter] = useState("All Focus Areas");
   const [sortBy, setSortBy] = useState<"recommended" | "closing" | "largest" | "newest">("recommended");
@@ -603,8 +604,85 @@ export function FundingResources() {
                 placeholder="Search grants, funders, focus areas..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full min-h-[40px] pl-10 pr-4 py-2 border border-slate-200 dark:border-[#1E3B34] bg-white dark:bg-[#0D1F18] rounded-lg text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30 focus:border-[#2F8F6B] transition-all text-slate-900 dark:text-white"
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+                onKeyDown={(e) => { if (e.key === "Escape") { setSearchFocused(false); (e.target as HTMLInputElement).blur(); } }}
+                className="w-full min-h-[40px] pl-10 pr-4 py-2 border border-slate-200 dark:border-[#1E3B34] bg-slate-50 dark:bg-[#0D1F18] rounded-lg text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2F8F6B]/30 focus:border-[#2F8F6B] transition-all text-slate-900 dark:text-white"
               />
+              {searchFocused && (() => {
+                const POPULAR_SEARCHES = ["Climate Grant", "Green Energy", "Community Fund", "Youth Program", "Environmental NGO", "Disaster Relief"];
+                const BROWSE_TYPES = ["All", "Grants", "Scholarships", "Fellowships", "Loans", "Competitions", "Accelerators"];
+                const predictive = search.length > 0
+                  ? opportunities.filter((o) =>
+                      o.title.toLowerCase().includes(search.toLowerCase()) ||
+                      (o.type ?? "").toLowerCase().includes(search.toLowerCase()) ||
+                      (o.funder_name ?? "").toLowerCase().includes(search.toLowerCase()) ||
+                      (o.focus_areas ?? []).some((f) => f.toLowerCase().includes(search.toLowerCase()))
+                    ).slice(0, 5)
+                  : [];
+                return (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#132B23] border border-slate-200 dark:border-[#1E3B34] rounded-xl shadow-lg p-3 z-50 max-h-80 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-150">
+                    {search.length > 0 ? (
+                      predictive.length > 0 ? (
+                        <div className="space-y-0.5">
+                          {predictive.map((o) => (
+                            <button
+                              key={o.id}
+                              onClick={() => { setSearch(o.title); setSearchFocused(false); }}
+                              className="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-[#1E3B34] text-left transition-colors"
+                            >
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{o.title}</p>
+                                <p className="text-xs text-slate-400 dark:text-[#6B8F7F] truncate">
+                                  {o.funder_name || "Unknown"}{o.type ? ` · ${o.type}` : ""}
+                                </p>
+                              </div>
+                              <ChevronRight className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-slate-400 dark:text-[#6B8F7F] px-3 py-2">No results match "{search}"</p>
+                      )
+                    ) : (
+                      <div className="space-y-4">
+                        <div>
+                          <p className="text-[10px] font-semibold text-slate-400 dark:text-[#6B8F7F] uppercase tracking-wide mb-2 px-1">Popular Searches</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {POPULAR_SEARCHES.map((s) => (
+                              <button
+                                key={s}
+                                onClick={() => { setSearch(s); setSearchFocused(false); }}
+                                className="text-xs px-3 py-1.5 rounded-full bg-slate-100 dark:bg-[#1E3B34] text-slate-600 dark:text-[#94C8AF] hover:bg-[#E8F5EF] dark:hover:bg-[#0F3D2E]/50 transition-colors"
+                              >
+                                {s}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-semibold text-slate-400 dark:text-[#6B8F7F] uppercase tracking-wide mb-2 px-1">Browse by Type</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {BROWSE_TYPES.map((t) => (
+                              <button
+                                key={t}
+                                onClick={() => { setTypeFilter(t); setSearchFocused(false); }}
+                                className={`text-xs px-3 py-1.5 rounded-full transition-colors ${
+                                  typeFilter === t
+                                    ? "bg-[#0F3D2E] text-white"
+                                    : "bg-slate-100 dark:bg-[#1E3B34] text-slate-600 dark:text-[#94C8AF] hover:bg-[#E8F5EF] dark:hover:bg-[#0F3D2E]/50"
+                                }`}
+                              >
+                                {t}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
             {/* Filters toggle */}
             <button
