@@ -576,7 +576,7 @@ export function MissionDashboard() {
             Tab Bar
         ───────────────────────────────────────────────────────────────────── */}
         {/* Search bar: input | tabs | filters — all in one container */}
-        <div style={{ animationDelay: '220ms' }} className="animate-slide-in bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
+        <div style={{ animationDelay: '220ms' }} className="animate-slide-in relative z-10 bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
           <div className="flex items-center gap-2">
             {/* Search input */}
             {workTab !== "my_projects" ? (
