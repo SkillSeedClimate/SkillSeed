@@ -241,7 +241,8 @@ function LeaderboardCard({ leaderboard, leaderboardLoading, userProfileId, user 
           {user ? (
             <Link
               to="#challenges"
-              className="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg bg-[#0F3D2E] text-white text-sm font-medium hover:bg-[#2F8F6B] transition-colors"
+              style={{ animationDelay: 'calc(var(--card-delay, 0ms) + 300ms)' }}
+              className="animate-btn-entrance inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg bg-[#0F3D2E] text-white text-sm font-medium hover:bg-[#2F8F6B] transition-colors"
             >
               <Target className="w-4 h-4" />
               Join a challenge
@@ -249,7 +250,8 @@ function LeaderboardCard({ leaderboard, leaderboardLoading, userProfileId, user 
           ) : (
             <Link
               to="/auth"
-              className="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg bg-[#0F3D2E] text-white text-sm font-medium hover:bg-[#2F8F6B] transition-colors"
+              style={{ animationDelay: 'calc(var(--card-delay, 0ms) + 300ms)' }}
+              className="animate-btn-entrance inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg bg-[#0F3D2E] text-white text-sm font-medium hover:bg-[#2F8F6B] transition-colors"
             >
               <LogIn className="w-4 h-4" />
               Sign in to join
@@ -735,7 +737,7 @@ export function CommunityChallenges() {
       {/* ─────────────────────────────────────────────────────────────────────
           Page Header (matches Missions pattern)
       ───────────────────────────────────────────────────────────────────── */}
-      <header className="bg-white dark:bg-[#132B23] border-b border-slate-200 dark:border-[#1E3B34]">
+      <header className="animate-slide-down bg-white dark:bg-[#132B23] border-b border-slate-200 dark:border-[#1E3B34]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -768,10 +770,11 @@ export function CommunityChallenges() {
             { icon: Target, label: "Active", isBeta: true },
             { icon: Leaf, label: "Actions", isBeta: true },
             { icon: Trophy, label: "Challenges", value: filteredChallenges.length, isBeta: false },
-          ].map(({ icon: Icon, label, value, isBeta }) => (
+          ].map(({ icon: Icon, label, value, isBeta }, index) => (
             <div
               key={label}
-              className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4"
+              style={{ animationDelay: `${index * 60}ms` }}
+              className="animate-slide-in bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4"
             >
               <p className="text-xs text-slate-500 dark:text-[#94C8AF] font-medium mb-1 flex items-center gap-1.5">
                 <Icon className="w-3 h-3" />
@@ -795,7 +798,7 @@ export function CommunityChallenges() {
         {/* ─────────────────────────────────────────────────────────────────────
             Full-width Search + Tabs + Filters
         ───────────────────────────────────────────────────────────────────── */}
-        <div className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
+        <div style={{ animationDelay: '260ms' }} className="animate-slide-in bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-4">
           <div className="flex items-center gap-2">
             {/* Search input with predictive dropdown */}
             {activeTab !== "feed" ? (
@@ -1021,7 +1024,7 @@ export function CommunityChallenges() {
                 )}
               </>
             ) : filteredChallenges.length === 0 ? (
-              <div className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-10 text-center">
+              <div style={{ animationDelay: '300ms', '--card-delay': '300ms' } as React.CSSProperties} className="animate-slide-in bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-10 text-center">
                 <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-[#1E3B34] flex items-center justify-center mx-auto mb-4">
                   <Trophy className="w-7 h-7 text-slate-400 dark:text-[#6DD4A8]" />
                 </div>
@@ -1045,7 +1048,8 @@ export function CommunityChallenges() {
                   <button
                     onClick={() => user ? setCreateModalOpen(true) : null}
                     disabled={!user}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#0F3D2E] text-white text-sm font-medium hover:bg-[#2F8F6B] transition-colors disabled:opacity-50"
+                    style={{ animationDelay: 'calc(var(--card-delay, 0ms) + 320ms)' }}
+                    className="animate-btn-entrance inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#0F3D2E] text-white text-sm font-medium hover:bg-[#2F8F6B] transition-colors disabled:opacity-50"
                   >
                     <Plus className="w-4 h-4" />
                     Start a Challenge
@@ -1068,8 +1072,8 @@ export function CommunityChallenges() {
                         isFeaturedChallenge
                           ? "border-[#2F8F6B]/40 ring-1 ring-[#2F8F6B]/20"
                           : "border-slate-200 dark:border-[#1E3B34]"
-                      } ${isLoaded ? "opacity-100" : "opacity-0"}`}
-                      style={{ transitionDelay: `${Math.min(200, index * 40)}ms` }}
+                      } ${isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
+                      style={{ transitionDelay: `${Math.min(200, index * 40)}ms`, '--card-delay': `${Math.min(200, index * 40)}ms` } as React.CSSProperties}
                     >
                       {/* Featured challenge gets special treatment */}
                       {isFeaturedChallenge ? (
@@ -1175,7 +1179,7 @@ export function CommunityChallenges() {
                       )}
 
                       {/* Actions - shared by both featured and regular cards */}
-                      <div className="px-4 sm:px-5 pb-4 sm:pb-5">
+                      <div className="animate-btn-entrance px-4 sm:px-5 pb-4 sm:pb-5" style={{ animationDelay: 'calc(var(--card-delay, 0ms) + 380ms)' }}>
                         <div className="flex gap-2">
                           {isCompleted ? (
                             <div className="flex-1 py-2 rounded-lg text-sm font-medium bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 flex items-center justify-center gap-1.5">
@@ -1254,16 +1258,18 @@ export function CommunityChallenges() {
             {/* ══════════════════════════════════════════════════════════════════════════════
                 LEADERBOARD - Pre-launch empty state with optional demo toggle
             ══════════════════════════════════════════════════════════════════════════════ */}
-            <LeaderboardCard
-              leaderboard={leaderboard}
-              leaderboardLoading={leaderboardLoading}
-              userProfileId={userProfileId}
-              user={user}
-            />
+            <div style={{ animationDelay: '320ms', '--card-delay': '320ms' } as React.CSSProperties} className="animate-slide-in">
+              <LeaderboardCard
+                leaderboard={leaderboard}
+                leaderboardLoading={leaderboardLoading}
+                userProfileId={userProfileId}
+                user={user}
+              />
+            </div>
 
             {/* My Stats - Only show if logged in */}
             {user && (
-              <div className="bg-[#0F3D2E] rounded-xl p-5 text-white">
+              <div style={{ animationDelay: '390ms' }} className="animate-slide-in bg-[#0F3D2E] rounded-xl p-5 text-white">
                 <div className="flex items-center gap-2 mb-4">
                   <Award className="w-5 h-5 text-[#6DD4A8]" />
                   <span className="font-semibold">My Stats</span>
@@ -1298,7 +1304,7 @@ export function CommunityChallenges() {
             )}
 
             {/* Trending Skills — derived from real challenge data */}
-            <div className="bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-5">
+            <div style={{ animationDelay: '460ms' }} className="animate-slide-in bg-white dark:bg-[#132B23] rounded-xl border border-slate-200 dark:border-[#1E3B34] p-5">
               <div className="flex items-center gap-2 mb-4">
                 <TrendingUp className="w-5 h-5 text-[#2F8F6B]" />
                 <h3 className="font-semibold text-slate-900 dark:text-white">Trending Skills</h3>
