@@ -108,20 +108,20 @@ function getQuestIcon(quest: Quest): React.ReactNode {
 
 // Pre-launch credibility features (no fake testimonials)
 const credibilityFeatures = [
-  { 
-    icon: Target, 
-    title: "Real-world missions", 
-    desc: "Short, practical activities you can complete locally." 
+  {
+    icon: Target,
+    title: "Actionable projects",
+    desc: "Practical work designed to create measurable results, not just awareness.",
   },
-  { 
-    icon: CheckCircle, 
-    title: "Volunteer-ready", 
-    desc: "Clear requirements, time estimates, and next steps." 
+  {
+    icon: CheckCircle,
+    title: "Defined expectations",
+    desc: "Clear expectations, estimated effort, and defined deliverables — before you commit.",
   },
-  { 
-    icon: FileCheck, 
-    title: "Proof of impact", 
-    desc: "Track what you did and build a shareable record." 
+  {
+    icon: FileCheck,
+    title: "Verified contributions",
+    desc: "Maintain a verified record of your contributions and results.",
   },
 ];
 
@@ -236,7 +236,7 @@ export function LandingPage() {
       icon: Sprout,
       title: "I'm a Learner",
       subtitle: "Beginner-friendly",
-      desc: "Build climate skills from scratch with guided quests. No experience needed.",
+      desc: "Gain hands-on experience through guided projects. No prior experience needed.",
       cta: "Start Learning",
       featured: false,
     },
@@ -245,7 +245,7 @@ export function LandingPage() {
       icon: Wrench,
       title: "I'm a Volunteer",
       subtitle: "Recommended",
-      desc: "Deploy your skills on real climate projects. Build a verified impact portfolio.",
+      desc: "Apply your expertise to meaningful projects and showcase your contributions.",
       cta: "Find Projects",
       featured: true,
     },
@@ -254,7 +254,7 @@ export function LandingPage() {
       icon: Building2,
       title: "I'm an Organization",
       subtitle: "Post projects",
-      desc: "Get matched with skilled volunteers for your climate initiatives.",
+      desc: "Find contributors who can help move your initiatives forward.",
       cta: "Post a Project",
       featured: false,
     },
@@ -282,15 +282,15 @@ export function LandingPage() {
             variants={heroItem}
             className="mb-5 text-balance tracking-tight"
             style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: "clamp(2.25rem, 5vw, 3.25rem)", lineHeight: 1.15, letterSpacing: "-0.02em" }}>
-            <span className="block text-slate-900 dark:text-[#BEEBD7]">Where climate action</span>
-            <span className="block text-[#2F8F6B] dark:text-[#6DD4A8] mt-1 sm:mt-1.5">finds its people.</span>
+            <span className="block text-slate-900 dark:text-[#BEEBD7]">Build climate solutions</span>
+            <span className="block text-[#2F8F6B] dark:text-[#6DD4A8] mt-1 sm:mt-1.5">with real projects.</span>
           </motion.h1>
 
           <motion.p
             variants={heroItem}
             className="mb-10 mx-auto text-base sm:text-lg text-slate-600 dark:text-[#94C8AF] text-pretty"
             style={{ lineHeight: 1.7, maxWidth: "520px" }}>
-            Connect with short, real-world climate missions. Learn by doing. Build verified skills. Make measurable impact.
+            Work on real climate projects, gain practical experience, and build a portfolio of verified impact.
           </motion.p>
 
           <motion.div variants={heroItem} className="flex flex-col sm:flex-row gap-3 justify-center mb-10">
@@ -345,10 +345,10 @@ export function LandingPage() {
                 <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-[#6DD4A8]">Mission</span>
               </div>
               <h3 className="mb-2.5 text-slate-900 dark:text-[#BEEBD7]" style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: "1.05rem", lineHeight: 1.4 }}>
-                Build capacity. Deploy people. Solve climate challenges.
+                Connect people, skills, and projects to drive climate solutions.
               </h3>
               <p className="text-slate-600 dark:text-[#94C8AF] text-sm leading-relaxed">
-                Starting in the Philippines and growing globally. Rooted in community, driven by people.
+                Built in the Philippines, designed to scale through community-led action.
               </p>
             </motion.div>
             <motion.div
@@ -366,10 +366,10 @@ export function LandingPage() {
                 <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-[#6DD4A8]">Vision</span>
               </div>
               <h3 className="mb-2.5 text-slate-900 dark:text-[#BEEBD7]" style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: "1.05rem", lineHeight: 1.4 }}>
-                A world where no climate crisis goes unanswered.
+                A world where every climate challenge has people ready to solve it.
               </h3>
               <p className="text-slate-600 dark:text-[#94C8AF] text-sm leading-relaxed">
-                The people and skills to respond already exist in every community.
+                The contributors and expertise to respond already exist in every community.
               </p>
             </motion.div>
           </div>
@@ -390,10 +390,10 @@ export function LandingPage() {
               How it works
             </span>
             <h2 className="mb-3 text-slate-900 dark:text-[#BEEBD7]" style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: "clamp(1.5rem, 3vw, 2rem)" }}>
-              From signup to impact in three steps
+              Find a project. Join a team. Make a difference.
             </h2>
             <p className="max-w-lg mx-auto text-slate-600 dark:text-[#94C8AF]">
-              Whether you want to learn, volunteer, or post projects, getting started takes minutes.
+              Whether you're learning, volunteering, or leading — you can start contributing in minutes.
             </p>
           </motion.div>
 
@@ -405,25 +405,25 @@ export function LandingPage() {
             whileInView="show"
             viewport={LANDING_VIEWPORT}>
             {[
-              { 
-                step: "01", 
-                icon: Sprout, 
-                title: "Browse or Post", 
-                desc: "Browse real climate missions, or post a project that needs skilled volunteers.",
-                cta: { label: "Browse missions", to: "/hands-on" }
+              {
+                step: "01",
+                icon: Sprout,
+                title: "Discover Opportunities",
+                desc: "Find projects that match your interests, or create one and recruit contributors.",
+                cta: { label: "Browse projects", to: "/hands-on" }
               },
-              { 
-                step: "02", 
-                icon: Users, 
-                title: "Match & Connect", 
-                desc: "Get matched with people who can help. Volunteers find projects; organizers find support.",
+              {
+                step: "02",
+                icon: Users,
+                title: "Join the Right Team",
+                desc: "Connect skilled contributors with projects that need their expertise.",
                 cta: { label: "See how matching works", to: "/about" }
               },
-              { 
-                step: "03", 
-                icon: TrendingUp, 
-                title: "Make Impact", 
-                desc: "Complete missions, submit proof, and track outcomes as you build an impact portfolio.",
+              {
+                step: "03",
+                icon: TrendingUp,
+                title: "Deliver Results",
+                desc: "Complete projects, document your contributions, and build a verified portfolio.",
                 cta: { label: "View sample portfolio", to: "/progress" }
               },
             ].map(({ step, icon: Icon, title, desc, cta }) => (
@@ -488,7 +488,7 @@ export function LandingPage() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
             <PreLaunchStat label="Members" desc="launching soon" />
-            <PreLaunchStat label="Missions" desc="ready to go" />
+            <PreLaunchStat label="Projects" desc="ready to join" />
             <PreLaunchStat label="Countries" desc="starting in PH" />
           </div>
           <p className="text-center text-xs mt-8 text-white/50">
@@ -510,7 +510,7 @@ export function LandingPage() {
               Built for everyone
             </h2>
             <p className="max-w-md mx-auto text-slate-600 dark:text-[#94C8AF]">
-              Whether you're learning, volunteering, or leading projects.
+              Whether you're gaining experience, contributing expertise, or leading a project.
             </p>
           </motion.div>
 
@@ -581,7 +581,7 @@ export function LandingPage() {
               <h2 className="text-slate-900 dark:text-emerald-50" style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: "clamp(1.5rem, 3vw, 2rem)" }}>
                 Featured quests
               </h2>
-              <p className="text-slate-600 dark:text-emerald-200/75 text-sm mt-1">Hands-on climate missions you can start today.</p>
+              <p className="text-slate-600 dark:text-emerald-200/75 text-sm mt-1">Real projects you can join and contribute to today.</p>
             </div>
             <Link
               to="/hands-on"
@@ -640,7 +640,7 @@ export function LandingPage() {
             <Link
               to="/hands-on"
               className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
-              View all quests <ArrowRight className="w-3.5 h-3.5" />
+              View all projects <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
         </div>
@@ -656,10 +656,10 @@ export function LandingPage() {
             whileInView="show"
             viewport={LANDING_VIEWPORT}>
             <h2 className="text-slate-900 dark:text-emerald-50" style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: "clamp(1.5rem, 3vw, 2rem)" }}>
-              Built with early community feedback
+              Designed with input from volunteers and project leaders.
             </h2>
             <p className="text-slate-600 dark:text-emerald-200/75 text-sm mt-2 max-w-md mx-auto">
-              Designed around what real volunteers and learners need.
+              Every feature is shaped by what real contributors and organizers told us they needed.
             </p>
           </motion.div>
           <motion.div
@@ -697,10 +697,10 @@ export function LandingPage() {
           whileInView="show"
           viewport={{ once: true, amount: 0.35 }}>
           <motion.h2 variants={heroItem} className="text-white mb-4" style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: "clamp(1.5rem, 4vw, 2.25rem)", lineHeight: 1.2 }}>
-            Ready to make an impact?
+            Start your first climate project today.
           </motion.h2>
           <motion.p variants={heroItem} className="mb-8 text-white/70 text-base sm:text-lg">
-            Be among the first to build real climate skills. Start your first mission today.
+            Join early. Find a project that fits your expertise and make your first contribution.
           </motion.p>
           <motion.div variants={heroItem} className="flex flex-wrap gap-3 justify-center">
             <motion.div whileHover={reduceMotion ? undefined : { y: -1 }} whileTap={reduceMotion ? undefined : { scale: 0.98 }} className="inline-flex">
@@ -715,7 +715,7 @@ export function LandingPage() {
             <motion.div whileHover={reduceMotion ? undefined : { y: -1 }} className="inline-flex">
             <Link to="/hands-on"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm text-white font-medium border-2 border-white/40 hover:bg-white/15 hover:border-white/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 min-h-[48px]">
-                Browse quests <ArrowRight className="w-3.5 h-3.5" />
+                Browse projects <ArrowRight className="w-3.5 h-3.5" />
             </Link>
             </motion.div>
           </motion.div>
